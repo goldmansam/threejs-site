@@ -5,8 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Three.js Creative Starter</title>
   <link rel="stylesheet" href="./style.css" />
-  <!-- Optional favicon (remove if you don’t have one) -->
-  <link rel="icon" href="favicon.ico" />
+
+  <!-- ✅ Favicon (inline SVG, no extra file needed) -->
+  <link rel="icon" type="image/svg+xml"
+        href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23203a43"/><path d="M20 44 L32 20 L44 44 Z" fill="%2300ffd5"/></svg>' />
+
+  <!-- ✅ Import map so bare specifier "three" resolves in the browser -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.152.2/build/three.module.js"
+    }
+  }
+  </script>
 </head>
 <body>
   <canvas id="bg"></canvas>

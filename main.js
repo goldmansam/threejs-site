@@ -1,5 +1,5 @@
-// Import Three.js and GLTFLoader as ES modules
-import * as THREE from 'https://unpkg.com/three@0.152.2/build/three.module.js';
+// ✅ Thanks to the import map in index.html, this bare import works in the browser
+import * as THREE from 'three';
 import { GLTFLoader } from 'https://unpkg.com/three@0.152.2/examples/jsm/loaders/GLTFLoader.js';
 
 /* ------------------------------
@@ -18,7 +18,7 @@ camera.position.set(0, 0, 3);
 const renderer = new THREE.WebGLRenderer({
   canvas: document.querySelector('#bg'),
   antialias: true,
-  alpha: true, // allows CSS gradient background to show
+  alpha: true
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -38,10 +38,10 @@ scene.add(ambLight);
 ------------------------------ */
 function makeGradientTexture() {
   const size = 256;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
+  const canv = document.createElement('canvas');
+  canv.width = size;
+  canv.height = size;
+  const ctx = canv.getContext('2d');
 
   const grad = ctx.createLinearGradient(0, 0, size, size);
   grad.addColorStop(0,   '#00ffd5');
@@ -51,7 +51,7 @@ function makeGradientTexture() {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, size, size);
 
-  const tex = new THREE.CanvasTexture(canvas);
+  const tex = new THREE.CanvasTexture(canv);
   tex.needsUpdate = true;
   return tex;
 }
@@ -64,7 +64,7 @@ const cube = new THREE.Mesh(
   new THREE.MeshStandardMaterial({
     map: makeGradientTexture(),
     roughness: 0.35,
-    metalness: 0.2,
+    metalness: 0.2
   })
 );
 scene.add(cube);
