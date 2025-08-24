@@ -3,14 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Three.js Creative Starter</title>
+  <title>Three.js Interactive Portfolio</title>
+
+  <!-- Fonts: modern (Inter) + analog (DM Serif Display) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+
   <link rel="stylesheet" href="./style.css" />
 
-  <!-- ✅ Favicon (inline SVG, no extra file needed) -->
+  <!-- Favicon (inline SVG so no extra file needed) -->
   <link rel="icon" type="image/svg+xml"
         href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23203a43"/><path d="M20 44 L32 20 L44 44 Z" fill="%2300ffd5"/></svg>' />
 
-  <!-- ✅ Import map so bare specifier "three" resolves in the browser -->
+  <!-- Import map: lets us use `import "three"` in the browser -->
   <script type="importmap">
   {
     "imports": {
@@ -20,7 +24,78 @@
   </script>
 </head>
 <body>
+  <!-- WebGL canvas -->
   <canvas id="bg"></canvas>
+
+  <!-- Floating NAV -->
+  <nav class="nav">
+    <button class="nav-btn" data-panel="work" aria-label="Work">
+      <!-- briefcase icon -->
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 7V6a3 3 0 0 1 6 0v1m-9 4h12m-13 7h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Work</span>
+    </button>
+    <button class="nav-btn" data-panel="about" aria-label="About">
+      <!-- user icon -->
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm8 9a8 8 0 0 0-16 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>About</span>
+    </button>
+    <button class="nav-btn" data-panel="contact" aria-label="Contact">
+      <!-- mail icon -->
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Zm0 0 8 6 8-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Contact</span>
+    </button>
+  </nav>
+
+  <!-- Zoom controls -->
+  <div class="zoom-ctrl">
+    <button id="zoomIn" aria-label="Zoom in">＋</button>
+    <button id="zoomOut" aria-label="Zoom out">−</button>
+  </div>
+
+  <!-- Slide-in panels -->
+  <aside class="panel" id="panel-work" aria-hidden="true">
+    <div class="panel-header">
+      <h2 class="analog">Selected Work</h2>
+      <button class="close" data-close="panel-work" aria-label="Close">✕</button>
+    </div>
+    <div class="panel-content">
+      <article class="card">
+        <h3>Immersive Microsite</h3>
+        <p>A scroll-driven Three.js story with particles, morph targets, and post-processing.</p>
+      </article>
+      <article class="card">
+        <h3>Realtime Data Canvas</h3>
+        <p>WebGL dashboards with audio-reactive shaders and GPU instancing.</p>
+      </article>
+      <article class="card">
+        <h3>Brand Playground</h3>
+        <p>Interactive typography and physics-based UI experiments.</p>
+      </article>
+    </div>
+  </aside>
+
+  <aside class="panel" id="panel-about" aria-hidden="true">
+    <div class="panel-header">
+      <h2 class="analog">About</h2>
+      <button class="close" data-close="panel-about" aria-label="Close">✕</button>
+    </div>
+    <div class="panel-content">
+      <p>Hello! I design and build playful, cinematic web experiences. I blend code, motion, and storytelling to make the browser feel alive.</p>
+      <p class="muted">Stack: Three.js, GLSL, GSAP, WebAudio, React, Vite</p>
+    </div>
+  </aside>
+
+  <aside class="panel" id="panel-contact" aria-hidden="true">
+    <div class="panel-header">
+      <h2 class="analog">Contact</h2>
+      <button class="close" data-close="panel-contact" aria-label="Close">✕</button>
+    </div>
+    <div class="panel-content">
+      <p>Email: <a href="mailto:hello@example.com">hello@example.com</a></p>
+      <p>LinkedIn: <a href="#" target="_blank" rel="noopener">/in/your-handle</a></p>
+      <p>GitHub: <a href="#" target="_blank" rel="noopener">github.com/your-handle</a></p>
+    </div>
+  </aside>
 
   <!-- ES module entrypoint -->
   <script type="module" src="./main.js"></script>
