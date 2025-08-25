@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Samuel Goldman — 3D Particle Space</title>
+<title>Samuel Goldman — Particle Portfolio</title>
 <style>
   html, body { height: 100%; margin: 0; background: #0a0b10; overflow: hidden; }
   canvas { display: block; }
@@ -12,7 +12,7 @@
   .rail {
     position: fixed; inset: 0 auto 0 0; width: 210px; z-index: 20;
     padding: 18px 14px; display: grid; gap: 10px; align-content: start;
-    background: linear-gradient(180deg, rgba(10,12,18,.7), rgba(10,12,18,.35));
+    background: linear-gradient(180deg, rgba(10,12,18,.70), rgba(10,12,18,.35));
     border-right: 1px solid rgba(255,255,255,.08);
     backdrop-filter: blur(8px);
     color: #e8eef8; font: 14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -21,41 +21,31 @@
   .vnav { display: grid; gap: 8px; margin-top: 6px; }
   .vnav button {
     appearance: none; border: 1px solid rgba(255,255,255,.14);
-    background: rgba(20,22,28,.45); color: #e8eef8;
+    background: rgba(20,22,28,.48); color: #e8eef8;
     padding: 10px 12px; border-radius: 999px; text-align: left; cursor: pointer;
     transition: border-color .16s ease, background .16s ease, transform .12s ease, color .16s ease;
   }
-  .vnav button:hover { border-color: rgba(255,255,255,.28); background: rgba(28,30,36,.55); }
+  .vnav button:hover { border-color: rgba(255,255,255,.28); background: rgba(28,30,36,.58); }
   .vnav button:active { transform: scale(.98); }
   .vnav button.active { color:#9ff; border-color: rgba(160,240,255,.55); }
 
-  /* HUD & prompts */
-  .hud {
-    position: fixed; left: 230px; bottom: 12px; z-index: 15;
-    color: #a9b6c9; font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    background: rgba(10,12,18,.45); border: 1px solid rgba(255,255,255,.12);
-    border-radius: 10px; padding: 8px 10px; backdrop-filter: blur(6px);
-  }
+  /* Prompts / hints */
   .topright {
     position: fixed; right: 14px; top: 14px; z-index: 15;
     color: #a9b6c9; font: 12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     background: rgba(10,12,18,.45); border: 1px solid rgba(255,255,255,.12);
     border-radius: 999px; padding: 6px 10px; backdrop-filter: blur(6px);
   }
-  .overlay {
-    position: fixed; inset: 0; display: grid; place-items: center; z-index: 25; pointer-events: none;
-  }
+  .overlay { position: fixed; inset: 0; display: grid; place-items: center; z-index: 25; pointer-events: none; }
   .prompt {
     color:#e8eef8; font: 18px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
     background: rgba(10,12,18,.6); border: 1px solid rgba(255,255,255,.15);
     padding: 14px 18px; border-radius: 12px; backdrop-filter: blur(6px); opacity: .95;
-    pointer-events: auto;
   }
   .prompt.hide { display:none; }
 
   @media (max-width: 920px) {
     .rail { width: 170px; }
-    .hud { left: 190px; }
   }
 </style>
 </head>
@@ -71,62 +61,59 @@
     </div>
   </aside>
 
-  <div class="topright">Move mouse = look • Scroll/menu = move • Click = reveal / name outline</div>
-  <div class="hud">Hover swirls particles. Signs glow in as you arrive.</div>
-
-  <div class="overlay">
-    <div id="prompt" class="prompt">Click to reveal: <b>Samuel Goldman Portfolio</b></div>
-  </div>
+  <div class="topright">Move mouse = look • Scroll/menu = move • Click name = scatter</div>
+  <div class="overlay"><div id="prompt" class="prompt">Click <b>Samuel Goldman</b> to begin</div></div>
 
 <script type="module">
 import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
 
 /* ---------------- CONFIG ---------------- */
 const CONFIG = {
-  COUNT: 14000,
-  BOX: 120,
+  // Space
+  AMBIENT_COUNT: 9000,     // always-floating background particles
+  SHAPE_COUNT:   9000,     // particles available to form words
+  BOX: 140,                // ambient cloud bounds (half-size)
   BASE_SPEED: 0.03,
   HOVER_RADIUS: 10,
   HOVER_FORCE: 0.22,
   DAMPING: 0.985,
+
+  // Camera / navigation
   CAMERA_FOV: 60,
-  CAMERA_START_Z: 150,
+  CAMERA_START_Z: 140,
+  Z: { start: 0, work: -60, about: -140, contact: -220 }, // word depths
+  FORWARD_STOP_Z: -220,    // can't go past this; can go back
+  WHEEL_STEP: 8,
 
-  // Section depths (z)
-  SIGN_Z: { work: -40, about: -120, contact: -200 },
+  // Word shapes
+  WORD_WIDTH_UNITS: 90,    // overall width of text in world units
+  NAME: "Samuel Goldman",
+  WORK: "Work",
+  ABOUT: "About",
+  CONTACT: "Contact",
+  CANVAS_W: 1600,          // raster for sampling points
+  STEP: 4,                 // sampling step (lower = more dots)
+  THICKNESS: 3,            // +/- Z variation for depth
+  OUTLINE_ONLY: true,      // edge points only (crisper glyphs)
 
-  SIGN_SIZE: 32,          // bigger so long words never clip
-  SIGN_GLOW: 0.9,
+  // Morph feel
+  ATTRACT: 0.010,          // attraction strength to targets
+  MORPH_IN_RATE: 0.018,    // rise speed
+  MORPH_OUT_RATE: 0.022,   // fall speed
 
-  NAME_PRIMARY: "Samuel Goldman Portfolio",
-  NAME_OUTLINE: "Samuel Goldman",
-  NAME_SIZE: 1200,  // raster canvas width
-  NAME_STEP: 4,
-  NAME_DEPTH: 3,
-  NAME_OUTLINE_ONLY: true,
-
-  // Morph feel (slower/clearer)
-  ATTRACT_STRENGTH: 0.010,
-  MORPH_IN_RATE: 0.016,   // slower in
-  MORPH_OUT_RATE: 0.022,  // slower out
-  HOLD_SECONDS_FIRST: 2.8
+  // Dot look
+  DOT_SIZE: 0.65,          // particle size
+  DOT_OPACITY: 0.95
 };
 
-const CAMERA_MAX_Z = 220;                    // back
-const CAMERA_MIN_Z = CONFIG.SIGN_Z.contact;  // forward stop
-const CONTACT_Z = CAMERA_MIN_Z;
-const SCROLL_STEP = 8;
-
-const PALETTE = [
-  [0.30, 0.85, 0.90], [0.90, 0.35, 0.85], [0.85, 0.75, 0.30],
-  [0.40, 0.95, 0.85], [0.95, 0.40, 0.70], [0.75, 0.85, 0.35]
-];
+const CAMERA_MAX_Z = 220;
+const CAMERA_MIN_Z = CONFIG.FORWARD_STOP_Z;
 
 /* ---------------- SCENE ---------------- */
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x0b0c10, 0.008);
+scene.fog = new THREE.FogExp2(0x06070b, 0.006);
 
-const camera = new THREE.PerspectiveCamera(CONFIG.CAMERA_FOV, innerWidth/innerHeight, 0.1, 2000);
+const camera = new THREE.PerspectiveCamera(CONFIG.CAMERA_FOV, innerWidth/innerHeight, 0.1, 4000);
 camera.position.set(0, 0, CONFIG.CAMERA_START_Z);
 
 const rig = new THREE.Object3D();
@@ -136,13 +123,74 @@ rig.add(camera);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setClearColor(0x0a0b10, 1);
+renderer.setClearColor(0x07080c, 1);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
-scene.add(new THREE.AmbientLight(0x334455, 0.6));
+scene.add(new THREE.AmbientLight(0x334455, 0.65));
 
-/* ---------------- ROUND PARTICLE SPRITE ---------------- */
+/* ---------------- NEBULA TIE-DYE BACKGROUND (shader sphere) ---------------- */
+const nebulaUniforms = {
+  uTime: { value: 0 },
+  uIntensity: { value: 0.8 },
+  uHueShift: { value: 0.0 }
+};
+const nebulaMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide,
+  uniforms: nebulaUniforms,
+  vertexShader: /* glsl */`
+    varying vec3 vPos;
+    void main(){
+      vPos = normalize(position);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+    }
+  `,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    varying vec3 vPos;
+    uniform float uTime;
+    uniform float uIntensity;
+    uniform float uHueShift;
+
+    // cheap pseudo-noise via trig
+    float n(vec3 p){
+      return sin(p.x)*sin(p.y)*sin(p.z);
+    }
+    float fbm(vec3 p){
+      float f=0.0;
+      float a=0.5;
+      for(int i=0;i<6;i++){
+        f += a*n(p); p *= 2.03; p += vec3(0.1,0.27,-0.19);
+        a *= 0.55;
+      }
+      return f;
+    }
+
+    vec3 palette(float t){
+      // tie-dye mix: teal/magenta/amber cycling
+      vec3 a = vec3(0.35, 0.7, 0.9);
+      vec3 b = vec3(0.9,  0.35, 0.75);
+      vec3 c = vec3(0.85, 0.75, 0.3);
+      float k1 = 0.5 + 0.5*sin(6.2831*(t+uHueShift));
+      float k2 = 0.5 + 0.5*sin(6.2831*(t*1.3+0.23+uHueShift));
+      return mix(mix(a,b,k1), c, k2);
+    }
+
+    void main(){
+      vec3 p = normalize(vPos) * 2.0 + vec3(0.0,0.0,uTime*0.03);
+      float d = fbm(p*2.0 + uTime*0.05);
+      float m = smoothstep(-0.6, 0.9, d);
+      vec3 col = palette(m);
+      // dark core + bright wisps
+      col = mix(vec3(0.04,0.05,0.07), col, uIntensity * (0.35 + 0.65*m));
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `
+});
+const nebula = new THREE.Mesh(new THREE.SphereGeometry(2000, 64, 64), nebulaMat);
+rig.add(nebula); // follow the camera rig so it never goes black
+
+/* ---------------- ROUND DOT TEXTURE ---------------- */
 function makeDotTexture(size=64){
   const c = document.createElement("canvas");
   c.width = c.height = size;
@@ -163,364 +211,326 @@ function makeDotTexture(size=64){
 }
 const dotTex = makeDotTexture();
 
-/* ---------------- PARTICLES ---------------- */
-const count = CONFIG.COUNT;
-const positions = new Float32Array(count*3);
-const velocities = new Float32Array(count*3);
-const colors = new Float32Array(count*3);
-const targets = new Float32Array(count*3);
-const hasTarget = new Uint8Array(count);
-
-const rand = (a,b)=>a + Math.random()*(b-a);
-for (let i=0;i<count;i++){
-  const i3=i*3;
-  positions[i3+0] = rand(-CONFIG.BOX, CONFIG.BOX);
-  positions[i3+1] = rand(-CONFIG.BOX, CONFIG.BOX);
-  positions[i3+2] = rand(-CONFIG.BOX, CONFIG.BOX);
-  velocities[i3+0] = rand(-CONFIG.BASE_SPEED, CONFIG.BASE_SPEED);
-  velocities[i3+1] = rand(-CONFIG.BASE_SPEED, CONFIG.BASE_SPEED);
-  velocities[i3+2] = rand(-CONFIG.BASE_SPEED, CONFIG.BASE_SPEED);
-  const c = PALETTE[(Math.random()*PALETTE.length)|0];
-  colors[i3+0]=c[0]; colors[i3+1]=c[1]; colors[i3+2]=c[2];
-}
-
-const geom = new THREE.BufferGeometry();
-geom.setAttribute("position", new THREE.BufferAttribute(positions,3));
-geom.setAttribute("color", new THREE.BufferAttribute(colors,3));
-const mat = new THREE.PointsMaterial({
-  size: 0.55, sizeAttenuation: true,
-  map: dotTex, alphaTest: 0.02,
-  vertexColors: true,
-  transparent: true, opacity: 0.95, depthWrite: false
-});
-const points = new THREE.Points(geom, mat);
-scene.add(points);
-
-/* ---------------- PIXELATED TEXT SPRITES ---------------- */
-function makePixelTextSprite(label, tintA="#8af", tintB="#f8a") {
-  // Step 1: draw LOW-RES text (intentionally chunky)
-  const srcH = 64; // pixel height of the text rendering (lower = more pixelation)
-  const src = document.createElement("canvas");
-  const sctx = src.getContext("2d");
-  sctx.font = `700 ${srcH}px system-ui, -apple-system, Segoe UI, Arial`;
-  const metrics = sctx.measureText(label);
-  const margin = 8;
-  src.width = Math.ceil(metrics.width) + margin*2;
-  src.height = srcH + margin*2;
-  sctx.font = `700 ${srcH}px system-ui, -apple-system, Segoe UI, Arial`;
-  sctx.textBaseline = "middle";
-  sctx.textAlign = "center";
-  sctx.fillStyle = "#fff";
-  sctx.imageSmoothingEnabled = false;
-  sctx.fillText(label, src.width/2, src.height/2);
-
-  // Step 2: scale into a square texture with NEAREST scaling + glow
-  const size = 1024; // large texture so sprite stays crisp
-  const texC = document.createElement("canvas");
-  texC.width = texC.height = size;
-  const tctx = texC.getContext("2d");
-  tctx.clearRect(0,0,size,size);
-  tctx.imageSmoothingEnabled = false;
-
-  // neon halo underlay
-  const grad = tctx.createRadialGradient(size/2, size/2, 10, size/2, size/2, size/2);
-  const hexToRgba = (h,a=1)=>{const n=parseInt(h.replace("#",""),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`};
-  grad.addColorStop(0, hexToRgba(tintA, 0.35));
-  grad.addColorStop(0.6, hexToRgba(tintB, 0.25));
-  grad.addColorStop(1, "rgba(0,0,0,0)");
-  tctx.fillStyle = grad;
-  tctx.fillRect(0,0,size,size);
-
-  // center-fit the low-res text into the square, with padding
-  const scale = Math.min((size*0.8)/src.width, (size*0.45)/src.height);
-  const w = Math.floor(src.width * scale);
-  const h = Math.floor(src.height * scale);
-  const x = Math.floor((size - w)/2);
-  const y = Math.floor((size - h)/2);
-  tctx.drawImage(src, 0,0, src.width,src.height, x,y,w,h);
-
-  const tex = new THREE.CanvasTexture(texC);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.magFilter = THREE.NearestFilter; // <- deliberate pixelation
-  tex.minFilter = THREE.NearestFilter;
-  tex.generateMipmaps = false;
-
-  const spMat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0 });
-  const sprite = new THREE.Sprite(spMat);
-  const s = CONFIG.SIGN_SIZE;
-  sprite.scale.set(s, s, 1);
-  return sprite;
-}
-
-const signs = [
-  makePixelTextSprite("Work", "#5ff", "#f8a"),
-  makePixelTextSprite("About", "#aff", "#ffa"),
-  makePixelTextSprite("Contact", "#f8a", "#8af")
+/* ---------------- AMBIENT PARTICLES (loose cloud across all depths) ---------------- */
+const ambientCount = CONFIG.AMBIENT_COUNT;
+const ambientPos = new Float32Array(ambientCount*3);
+const ambientVel = new Float32Array(ambientCount*3);
+const ambientCol = new Float32Array(ambientCount*3);
+const pal = [
+  [0.30, 0.85, 0.90], [0.90, 0.35, 0.85], [0.85, 0.75, 0.30],
+  [0.40, 0.95, 0.85], [0.95, 0.40, 0.70], [0.75, 0.85, 0.35]
 ];
-signs[0].position.set(0, 0, CONFIG.SIGN_Z.work);
-signs[1].position.set(0, 0, CONFIG.SIGN_Z.about);
-signs[2].position.set(0, 0, CONFIG.SIGN_Z.contact);
-signs.forEach(s => scene.add(s));
+const rnd = (a,b)=>a + Math.random()*(b-a);
+for (let i=0;i<ambientCount;i++){
+  const i3=i*3;
+  ambientPos[i3+0] = rnd(-CONFIG.BOX, CONFIG.BOX);
+  ambientPos[i3+1] = rnd(-CONFIG.BOX, CONFIG.BOX);
+  ambientPos[i3+2] = rnd(CONFIG.FORWARD_STOP_Z - 100, CONFIG.CAMERA_START_Z + 100); // span beyond contact
+  ambientVel[i3+0] = rnd(-CONFIG.BASE_SPEED, CONFIG.BASE_SPEED);
+  ambientVel[i3+1] = rnd(-CONFIG.BASE_SPEED, CONFIG.BASE_SPEED);
+  ambientVel[i3+2] = rnd(-CONFIG.BASE_SPEED, CONFIG.BASE_SPEED);
+  const c = pal[(Math.random()*pal.length)|0];
+  ambientCol[i3+0]=c[0]; ambientCol[i3+1]=c[1]; ambientCol[i3+2]=c[2];
+}
+const ambGeom = new THREE.BufferGeometry();
+ambGeom.setAttribute("position", new THREE.BufferAttribute(ambientPos,3));
+ambGeom.setAttribute("color",    new THREE.BufferAttribute(ambientCol,3));
+const ambMat = new THREE.PointsMaterial({
+  size: CONFIG.DOT_SIZE*0.8, map: dotTex, alphaTest: 0.02,
+  vertexColors: true, transparent: true, opacity: CONFIG.DOT_OPACITY*0.85,
+  depthWrite: false, blending: THREE.AdditiveBlending
+});
+const ambientPoints = new THREE.Points(ambGeom, ambMat);
+scene.add(ambientPoints);
 
-/* ---------------- NAME TARGETS ---------------- */
-function buildTextTargets(text, outlineOnly=true){
-  const W = CONFIG.NAME_SIZE, H = Math.round(CONFIG.NAME_SIZE * 0.22);
-  const cnv = document.createElement("canvas");
-  cnv.width = W; cnv.height = H;
-  const ctx = cnv.getContext("2d");
+/* ---------------- SHAPE PARTICLES (form the words) ---------------- */
+const shapeCount = CONFIG.SHAPE_COUNT;
+const pos = new Float32Array(shapeCount*3);
+const vel = new Float32Array(shapeCount*3);
+const col = new Float32Array(shapeCount*3);
+for (let i=0;i<shapeCount;i++){
+  const i3=i*3;
+  pos[i3+0] = rnd(-CONFIG.BOX*0.5, CONFIG.BOX*0.5);
+  pos[i3+1] = rnd(-CONFIG.BOX*0.5, CONFIG.BOX*0.5);
+  pos[i3+2] = rnd(-40, 40);
+  vel[i3+0] = rnd(-CONFIG.BASE_SPEED, CONFIG.BASE_SPEED);
+  vel[i3+1] = rnd(-CONFIG.BASE_SPEED, CONFIG.BASE_SPEED);
+  vel[i3+2] = rnd(-CONFIG.BASE_SPEED, CONFIG.BASE_SPEED);
+  const c = pal[(Math.random()*pal.length)|0];
+  col[i3+0]=c[0]; col[i3+1]=c[1]; col[i3+2]=c[2];
+}
+const shapeGeom = new THREE.BufferGeometry();
+shapeGeom.setAttribute("position", new THREE.BufferAttribute(pos,3));
+shapeGeom.setAttribute("color",    new THREE.BufferAttribute(col,3));
+const shapeMat = new THREE.PointsMaterial({
+  size: CONFIG.DOT_SIZE, map: dotTex, alphaTest: 0.02,
+  vertexColors: true, transparent: true, opacity: CONFIG.DOT_OPACITY,
+  depthWrite: false, blending: THREE.AdditiveBlending
+});
+const shapePoints = new THREE.Points(shapeGeom, shapeMat);
+scene.add(shapePoints);
+
+/* ---------------- TEXT → TARGET POINTS ---------------- */
+function buildTextTargets(text, zOffset){
+  const W = CONFIG.CANVAS_W;
+  const H = Math.round(W * 0.22);
+  const canvas = document.createElement("canvas");
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext("2d");
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle = "#fff";
   ctx.font = `bold ${Math.round(H*0.8)}px system-ui, Arial`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillText(text, W/2, H/2);
   const img = ctx.getImageData(0,0,W,H).data;
+
   const pts = [];
-  const step = CONFIG.NAME_STEP;
-  const alphaAt = (x,y)=> img[(y*W + x)*4 + 3];
+  const step = CONFIG.STEP;
+  const aAt = (x,y)=> img[(y*W + x)*4 + 3];
   for (let y=step; y<H-step; y+=step){
     for (let x=step; x<W-step; x+=step){
-      const a = alphaAt(x,y);
+      const a = aAt(x,y);
       if (a>128){
-        if (!outlineOnly){
-          pts.push([x,y]);
-        } else {
-          const nb = (alphaAt(x+step,y)<128) || (alphaAt(x-step,y)<128) || (alphaAt(x,y+step)<128) || (alphaAt(x,y-step)<128);
-          if (nb) pts.push([x,y]);
+        if (!CONFIG.OUTLINE_ONLY) { pts.push([x,y]); }
+        else {
+          const edge = (aAt(x+step,y)<128)||(aAt(x-step,y)<128)||(aAt(x,y+step)<128)||(aAt(x,y-step)<128);
+          if (edge) pts.push([x,y]);
         }
       }
     }
   }
-  const scale = 80 / W;
-  return pts.map(([x,y])=> [(x - W/2) * scale, (H/2 - y) * scale, THREE.MathUtils.randFloatSpread(CONFIG.NAME_DEPTH*2)]);
+  // map to world units (centered) with desired width
+  const scale = CONFIG.WORD_WIDTH_UNITS / W;
+  return pts.map(([x,y])=> [
+    (x - W/2) * scale,
+    (H/2 - y) * scale,
+    zOffset + THREE.MathUtils.randFloatSpread(CONFIG.THICKNESS*2)
+  ]);
 }
+const T_START   = buildTextTargets(CONFIG.NAME,   CONFIG.Z.start);
+const T_WORK    = buildTextTargets(CONFIG.WORK,   CONFIG.Z.work);
+const T_ABOUT   = buildTextTargets(CONFIG.ABOUT,  CONFIG.Z.about);
+const T_CONTACT = buildTextTargets(CONFIG.CONTACT,CONFIG.Z.contact);
 
-const NAME_PRIMARY_TARGETS = buildTextTargets(CONFIG.NAME_PRIMARY, false);
-const NAME_OUTLINE_TARGETS = buildTextTargets(CONFIG.NAME_OUTLINE, CONFIG.NAME_OUTLINE_ONLY);
+/* ---------------- MORPH CONTROL ---------------- */
+const targets = new Float32Array(shapeCount*3); // per-particle target position
+const hasTarget = new Uint8Array(shapeCount);   // 1 if particle is part of word
+let morph = 0;                                  // 0..1 blend factor
+let mode = "start";                             // which word we’re aiming at
+let firstScatter = false;
 
-let morph = 0;               // 0..1
-let morphTargetArray = null; // which set we're morphing to
-let morphMode = "none";      // "none" | "primary" | "outline"
-let firstRevealDone = false;
-
-const positionsAttr = new THREE.BufferAttribute(positions,3);
-geom.setAttribute("position", positionsAttr);
-
-/* assign targets to a subset */
-function assignTargets(array) {
-  morphTargetArray = array;
+function assignTargets(array){
   hasTarget.fill(0);
-  const useCount = Math.min(array.length, Math.floor(count*0.72));
+  const use = Math.min(array.length, Math.floor(shapeCount*0.8));
+  // random unique indices in the particle pool
   const chosen = new Set();
-  while (chosen.size < useCount) chosen.add((Math.random()*count)|0);
+  while (chosen.size < use) chosen.add((Math.random()*shapeCount)|0);
+  // quickly sample target points
   for (const pIndex of chosen) {
     const ti = (Math.random()*array.length)|0;
-    const [tx,ty,tz] = array[ti];
-    targets[pIndex*3+0] = tx;
-    targets[pIndex*3+1] = ty;
-    targets[pIndex*3+2] = tz;
-    hasTarget[pIndex] = 1;
+    const j = pIndex*3;
+    targets[j+0]=array[ti][0];
+    targets[j+1]=array[ti][1];
+    targets[j+2]=array[ti][2];
+    hasTarget[pIndex]=1;
   }
 }
 
-function startPrimaryReveal() {
-  assignTargets(NAME_PRIMARY_TARGETS);
-  morphMode = "primary";
-  document.getElementById("prompt")?.classList.add("hide");
-  morph = 0;
-  const up = () => {
-    morph = Math.min(1, morph + CONFIG.MORPH_IN_RATE);
-    if (morph < 1) requestAnimationFrame(up);
-    else setTimeout(down, CONFIG.HOLD_SECONDS_FIRST * 1000);
-  };
-  const down = () => {
-    morph = Math.max(0, morph - CONFIG.MORPH_OUT_RATE);
-    if (morph > 0) requestAnimationFrame(down);
-    else { morphMode = "none"; hasTarget.fill(0); firstRevealDone = true; }
-  };
-  requestAnimationFrame(up);
+/* start on Samuel Goldman */
+assignTargets(T_START);
+morph = 1;
+
+/* scatter the name on first click, then prompt to scroll */
+function scatterOnce(){
+  if (firstScatter) return;
+  firstScatter = true;
+  // give an outward kick to all shape particles that were in the word
+  for (let i=0;i<shapeCount;i++){
+    if (hasTarget[i]){
+      const i3=i*3;
+      vel[i3+0] += THREE.MathUtils.randFloatSpread(0.6);
+      vel[i3+1] += THREE.MathUtils.randFloatSpread(0.6);
+      vel[i3+2] += THREE.MathUtils.randFloatSpread(0.6);
+    }
+  }
+  hasTarget.fill(0);
+  // show “scroll/menu” hint
+  const p = document.getElementById("prompt");
+  if (p) { p.textContent = "Scroll to explore or use the menu"; p.classList.remove("hide"); }
+  // fade that hint after a moment
+  setTimeout(()=>{ p?.classList.add("hide"); }, 2400);
 }
 
-function toggleOutlineMorph() {
-  if (morphMode === "outline") {
-    const step = () => {
-      morph = Math.max(0, morph - CONFIG.MORPH_OUT_RATE);
-      if (morph > 0) requestAnimationFrame(step);
-      else { morphMode = "none"; hasTarget.fill(0); }
-    };
-    requestAnimationFrame(step);
-  } else {
-    assignTargets(NAME_OUTLINE_TARGETS);
-    morphMode = "outline";
-    const step = () => {
-      morph = Math.min(1, morph + CONFIG.MORPH_IN_RATE * 0.7);
-      if (morph < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }
+/* menu jumps: set camera target + morph to that word */
+function goTo(key){
+  mode = key;
+  const arr = (key==="start")? T_START : key==="work"? T_WORK : key==="about"? T_ABOUT : T_CONTACT;
+  assignTargets(arr);
+  // ramp morph in
+  const rise = ()=>{ morph = Math.min(1, morph + CONFIG.MORPH_IN_RATE); if (morph<1) requestAnimationFrame(rise); };
+  requestAnimationFrame(rise);
+  // camera move
+  targetCamZ = STOPS[key];
 }
 
 /* ---------------- INTERACTION ---------------- */
 let targetCamZ = CONFIG.CAMERA_START_Z;
-let mouseX = 0, mouseY = 0;
-let yaw = 0, pitch = 0, targetYaw = 0, targetPitch = 0;
+let mouseX=0, mouseY=0, yaw=0, pitch=0, tyaw=0, tpitch=0;
 
-function onResize(){
+addEventListener("resize", ()=>{
   camera.aspect = innerWidth/innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
-}
-addEventListener("resize", onResize);
+});
 
-function onPointerMove(e){
-  const nx = (e.clientX / innerWidth) * 2 - 1;
-  const ny = (e.clientY / innerHeight) * 2 - 1;
-  mouseX = nx; mouseY = ny;
-  targetYaw = nx * 0.25;
-  targetPitch = -ny * 0.15;
-}
-addEventListener("pointermove", onPointerMove, { passive: true });
+addEventListener("pointermove", e=>{
+  const nx = (e.clientX/innerWidth)*2-1;
+  const ny = (e.clientY/innerHeight)*2-1;
+  mouseX=nx; mouseY=ny;
+  tyaw   = nx * 0.25;
+  tpitch = -ny * 0.15;
+},{passive:true});
 
-// Allow backward at Contact, block forward past Contact
-function onWheel(e){
-  const dir = Math.sign(e.deltaY);      // +1 = wheel down
-  const intended = targetCamZ + (-dir) * SCROLL_STEP; // wheel down moves forward (more negative)
-  if (targetCamZ <= CONTACT_Z && intended < CONTACT_Z) {
+// allow backward at Contact, block forward past it
+addEventListener("wheel", e=>{
+  const dir = Math.sign(e.deltaY); // +1 wheel down
+  const intended = targetCamZ + (-dir) * CONFIG.WHEEL_STEP; // wheel down -> more negative
+  if (targetCamZ <= CAMERA_MIN_Z && intended < CAMERA_MIN_Z) {
     e.preventDefault(); // block going further forward
     return;
   }
   targetCamZ = THREE.MathUtils.clamp(intended, CAMERA_MIN_Z, CAMERA_MAX_Z);
-}
-addEventListener("wheel", onWheel, { passive: false });
+},{passive:false});
 
-// Click: first = primary reveal; then toggle outline
-addEventListener("pointerdown", () => {
-  if (!firstRevealDone) startPrimaryReveal();
-  else toggleOutlineMorph();
+// click behavior: if on start and morph ~1, scatter once; otherwise no toggle required
+addEventListener("pointerdown", ()=>{
+  if (mode==="start" && morph>0.95) {
+    scatterOnce();
+    // also hide initial prompt if visible
+    document.getElementById("prompt")?.classList.add("hide");
+  }
 });
 
-/* Left menu jumps */
-const stops = {
-  start: CONFIG.CAMERA_START_Z,
-  work:  CONFIG.SIGN_Z.work + 12,
-  about: CONFIG.SIGN_Z.about + 12,
-  contact: CONTACT_Z
+/* left menu */
+const STOPS = {
+  start:  CONFIG.CAMERA_START_Z,
+  work:   CONFIG.Z.work   + 16,
+  about:  CONFIG.Z.about  + 16,
+  contact:CONFIG.Z.contact+ 16
 };
-document.querySelectorAll('.vnav button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.vnav button').forEach(b => b.classList.remove('active'));
+document.querySelectorAll('.vnav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.vnav button').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    targetCamZ = stops[btn.dataset.stop];
+    goTo(btn.dataset.stop);
+    // hide prompt if any
+    document.getElementById("prompt")?.classList.add("hide");
   });
 });
-
-/* Highlight active menu based on nearest depth */
-function updateActiveNav() {
-  const z = camera.position.z;
-  let key = "start";
-  if (z < (CONFIG.SIGN_Z.work - 20)) key = "work";
-  if (z < (CONFIG.SIGN_Z.about - 20)) key = "about";
-  if (z <= CONTACT_Z + 0.1) key = "contact";
-  document.querySelectorAll('.vnav button').forEach(b => {
-    b.classList.toggle('active', b.dataset.stop === key);
-  });
-}
 
 /* ---------------- HOVER FORCE ---------------- */
 const ray = new THREE.Ray();
 const plane = new THREE.Plane(new THREE.Vector3(0,0,1), 0); // z=0 plane
 const hoverPoint = new THREE.Vector3(0,0,0);
 function updateHoverPoint(){
-  const ndc = new THREE.Vector3(mouseX, mouseY, 0.5);
-  ndc.unproject(camera);
+  const ndc = new THREE.Vector3(mouseX, mouseY, 0.5).unproject(camera);
   ray.origin.copy(camera.position);
   ray.direction.copy(ndc.sub(camera.position)).normalize();
   ray.intersectPlane(plane, hoverPoint);
 }
 
 /* ---------------- ANIMATE ---------------- */
+const ambPosAttr   = ambGeom.attributes.position;
+const shapePosAttr = shapeGeom.attributes.position;
 const clock = new THREE.Clock();
+
 function animate(){
   requestAnimationFrame(animate);
-  const dt = clock.getDelta();
+  const dt = Math.min(0.05, clock.getDelta());
+  nebulaUniforms.uTime.value += dt;
 
-  // camera ease + clamp forward at Contact
+  // camera
   const nextZ = camera.position.z + (targetCamZ - camera.position.z) * 0.08;
-  camera.position.z = (nextZ < CONTACT_Z) ? CONTACT_Z : nextZ;
-
-  // subtle look
-  yaw += (targetYaw - yaw) * 0.06;
-  pitch += (targetPitch - pitch) * 0.06;
+  camera.position.z = (nextZ < CAMERA_MIN_Z) ? CAMERA_MIN_Z : nextZ;
+  yaw += (tyaw - yaw) * 0.06;
+  pitch += (tpitch - pitch) * 0.06;
   rig.rotation.set(pitch, yaw, 0);
 
   updateHoverPoint();
 
-  // particles
-  const pos = geom.attributes.position.array;
-  for (let i=0;i<count;i++){
-    const i3 = i*3;
+  // AMBIENT update
+  for (let i=0;i<ambientCount;i++){
+    const j=i*3;
+    // gentle wander + damping
+    ambientVel[j+0] = ambientVel[j+0]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
+    ambientVel[j+1] = ambientVel[j+1]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
+    ambientVel[j+2] = ambientVel[j+2]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
+    ambientPos[j+0]+=ambientVel[j+0];
+    ambientPos[j+1]+=ambientVel[j+1];
+    ambientPos[j+2]+=ambientVel[j+2];
 
-    // damping + gentle wander
-    velocities[i3+0] = velocities[i3+0]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
-    velocities[i3+1] = velocities[i3+1]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
-    velocities[i3+2] = velocities[i3+2]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
+    // wrap in big box and deep z span
+    const B=CONFIG.BOX, Zmin=CONFIG.FORWARD_STOP_Z-200, Zmax=CONFIG.CAMERA_START_Z+200;
+    if (ambientPos[j+0]<-B) ambientPos[j+0]+=2*B; else if (ambientPos[j+0]>B) ambientPos[j+0]-=2*B;
+    if (ambientPos[j+1]<-B) ambientPos[j+1]+=2*B; else if (ambientPos[j+1]>B) ambientPos[j+1]-=2*B;
+    if (ambientPos[j+2]<Zmin) ambientPos[j+2] = Zmax; else if (ambientPos[j+2]>Zmax) ambientPos[j+2]=Zmin;
+  }
+  ambPosAttr.needsUpdate = true;
 
-    // hover repulsion
-    const dx = pos[i3+0] - hoverPoint.x;
-    const dy = pos[i3+1] - hoverPoint.y;
-    const dz = pos[i3+2] - hoverPoint.z;
+  // SHAPE update
+  // blend toward targets if assigned
+  for (let i=0;i<shapeCount;i++){
+    const j=i*3;
+    // hover repulsion (subtle)
+    const dx = pos[j+0]-hoverPoint.x;
+    const dy = pos[j+1]-hoverPoint.y;
+    const dz = pos[j+2]-hoverPoint.z;
     const r2 = CONFIG.HOVER_RADIUS*CONFIG.HOVER_RADIUS;
-    const d2 = dx*dx + dy*dy + dz*dz;
-    if (d2 < r2) {
-      const f = (1 - d2/r2) * CONFIG.HOVER_FORCE;
-      velocities[i3+0] += dx * f * dt * 30;
-      velocities[i3+1] += dy * f * dt * 30;
-      velocities[i3+2] += dz * f * dt * 30;
+    const d2 = dx*dx+dy*dy+dz*dz;
+    if (d2<r2){
+      const f=(1-d2/r2)*CONFIG.HOVER_FORCE;
+      vel[j+0]+=dx*f*dt*30; vel[j+1]+=dy*f*dt*30; vel[j+2]+=dz*f*dt*30;
     }
 
-    // morph attraction (scaled by morph 0..1)
-    if (hasTarget[i] && morph > 0) {
-      velocities[i3+0] += (targets[i3+0] - pos[i3+0]) * CONFIG.ATTRACT_STRENGTH * morph;
-      velocities[i3+1] += (targets[i3+1] - pos[i3+1]) * CONFIG.ATTRACT_STRENGTH * morph;
-      velocities[i3+2] += (targets[i3+2] - pos[i3+2]) * CONFIG.ATTRACT_STRENGTH * morph;
+    // attraction to targets (scaled by morph)
+    if (hasTarget[i] && morph>0){
+      vel[j+0]+= (targets[j+0]-pos[j+0]) * CONFIG.ATTRACT * morph;
+      vel[j+1]+= (targets[j+1]-pos[j+1]) * CONFIG.ATTRACT * morph;
+      vel[j+2]+= (targets[j+2]-pos[j+2]) * CONFIG.ATTRACT * morph;
     }
 
-    // integrate
-    pos[i3+0] += velocities[i3+0];
-    pos[i3+1] += velocities[i3+1];
-    pos[i3+2] += velocities[i3+2];
+    // integrate + damping + mild wander
+    vel[j+0] = vel[j+0]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
+    vel[j+1] = vel[j+1]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
+    vel[j+2] = vel[j+2]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
 
-    // wrap
-    const B = CONFIG.BOX;
-    if (pos[i3+0] < -B) pos[i3+0] += 2*B; else if (pos[i3+0] > B) pos[i3+0] -= 2*B;
-    if (pos[i3+1] < -B) pos[i3+1] += 2*B; else if (pos[i3+1] > B) pos[i3+1] -= 2*B;
-    if (pos[i3+2] < -B) pos[i3+2] += 2*B; else if (pos[i3+2] > B) pos[i3+2] -= 2*B;
+    pos[j+0]+=vel[j+0];
+    pos[j+1]+=vel[j+1];
+    pos[j+2]+=vel[j+2];
+
+    // wrap in a moderate box so they don't disappear forever
+    const B = CONFIG.BOX*0.9;
+    if (pos[j+0]<-B) pos[j+0]+=2*B; else if (pos[j+0]>B) pos[j+0]-=2*B;
+    if (pos[j+1]<-B) pos[j+1]+=2*B; else if (pos[j+1]>B) pos[j+1]-=2*B;
+    if (pos[j+2]<CONFIG.FORWARD_STOP_Z-40) pos[j+2]+= (CONFIG.CAMERA_START_Z+40) - (CONFIG.FORWARD_STOP_Z-40);
+    if (pos[j+2]>CONFIG.CAMERA_START_Z+40) pos[j+2]-= (CONFIG.CAMERA_START_Z+40) - (CONFIG.FORWARD_STOP_Z-40);
   }
-  geom.attributes.position.needsUpdate = true;
+  shapePosAttr.needsUpdate = true;
 
-  // signs: face camera, pixelated opacity ramp
-  for (const s of signs){
-    s.lookAt(camera.position);
-    const d = Math.abs(camera.position.z - s.position.z);
-    const vis = THREE.MathUtils.clamp(1 - (d/60), 0, 1);
-    s.material.opacity = vis;
-  }
+  // face “active” briefly: if we’re exactly on a word depth, make sure morph is present
+  // (handled by menu; scrolling can leave partial morph which feels nice)
 
-  updateActiveNav();
+  // Signs-as-words: no sprites needed — words are the particles themselves.
+
   renderer.render(scene, camera);
 }
 animate();
 
-// prompt hides on first click (also triggers reveal)
-document.addEventListener("pointerdown", () => {
-  const p = document.getElementById("prompt");
-  if (p) p.classList.add("hide");
-}, { once: true });
-
-/* ------------- click behavior combined with reveal above ------------- */
-addEventListener("pointerdown", () => {
-  if (!firstRevealDone) startPrimaryReveal();
-  else toggleOutlineMorph();
-});
+/* ---------- initial prompt handling ---------- */
+document.addEventListener("pointerdown", ()=>{
+  const prompt = document.getElementById("prompt");
+  if (prompt && mode==="start" && morph>0.95) prompt.classList.add("hide");
+},{once:true});
 </script>
 </body>
 </html>
