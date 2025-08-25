@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Samuel Goldman — Tie-Dye Particle Space</title>
 
-<!-- Fonts: Orbitron for the 3D title look; Share Tech Mono for "code" menu -->
+<!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 
 <style>
   :root{
-    --rail-w: 240px;         /* right menu width */
-    --neon: #00ff88;         /* neon green */
+    --rail-w: 240px;    /* right menu width */
+    --neon:  #00ff88;
   }
   html,body{height:100%;margin:0;background:#000204;overflow:hidden}
   canvas{display:block}
 
-  /* RIGHT “code” rail */
+  /* RIGHT neon “code” rail */
   .rail{
     position:fixed; inset:0 0 0 auto; width:var(--rail-w); z-index:30;
     padding:18px 14px; display:grid; gap:14px; align-content:start;
@@ -33,7 +33,7 @@
     font-weight:700; letter-spacing:.05em;
   }
   .divider{
-    height:1px; background:linear-gradient(90deg, rgba(0,255,160,.0), rgba(0,255,160,.5), rgba(0,255,160,0));
+    height:1px; background:linear-gradient(90deg, rgba(0,255,160,0), rgba(0,255,160,.5), rgba(0,255,160,0));
     box-shadow:0 0 12px rgba(0,255,160,.35);
   }
   .vnav{display:grid; gap:10px}
@@ -48,16 +48,9 @@
   .vnav button:hover{ transform:translateY(-1px); border-color:rgba(0,255,160,.6); box-shadow: inset 0 0 22px rgba(0,255,160,.2), 0 0 18px rgba(0,255,160,.2) }
   .vnav button.active{ color:#eafff5; border-color:#00ffb3; box-shadow: inset 0 0 26px rgba(0,255,160,.28), 0 0 24px rgba(0,255,160,.28) }
 
-  /* Small status line */
-  .status{
-    color:#7dffc0; font-size:12px; opacity:.9; white-space:pre-line;
-    text-shadow:0 0 10px rgba(0,255,160,.25);
-  }
+  .status{ color:#7dffc0; font-size:12px; opacity:.9; white-space:pre-line; text-shadow:0 0 10px rgba(0,255,160,.25) }
 
-  /* On very narrow screens, shrink rail a bit */
-  @media(max-width:900px){
-    :root{ --rail-w: 200px; }
-  }
+  @media(max-width:900px){ :root{ --rail-w: 200px; } }
 </style>
 </head>
 <body>
@@ -67,64 +60,67 @@
     <div class="divider"></div>
     <div class="vnav">
       <button data-key="start"   class="active">[0]  SAMUEL_GOLDMAN</button>
-      <button data-key="welcome">[1]  WELCOME</button>
-      <button data-key="work">[2]  WORK</button>
-      <button data-key="about">[3]  ABOUT</button>
-      <button data-key="contact">[4]  CONTACT</button>
+      <!-- Welcome removed as a section -->
+      <button data-key="work">[1]  WORK</button>
+      <button data-key="about">[2]  ABOUT</button>
+      <button data-key="contact">[3]  CONTACT</button>
     </div>
     <div class="divider"></div>
-    <div class="status" id="status">drag to orbit • click title to toggle (coming soon)</div>
+    <div class="status" id="status">drag to orbit • titles always face camera • click menu to jump</div>
   </aside>
 
 <script type="module">
-/* ====================== THREE SETUP ====================== */
 import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
 
-/* ---------------------- CONFIG ---------------------- */
+/* ================= CONFIG ================= */
 const CONFIG = {
-  // Particles
-  AMBIENT_COUNT: 32000,      // multi-color cloud (full screen)
-  SWARM_COUNT:   16000,      // small ring around titles
-  SHAPE_COUNT:   24000,      // dense filled text
-  BOX: 200,
+  // Brighter & many more hover particles
+  AMBIENT_COUNT: 80000,     // huge colored cloud
+  SWARM_COUNT:   26000,     // small colorful ring near titles
+  SHAPE_COUNT:   30000,     // dense text
+  BOX: 210,
   BASE_SPEED: 0.03,
   DAMPING: 0.985,
 
-  // Camera / Orbit
+  // Camera / orbit
   CAMERA_FOV: 60,
-  ORBIT_RADIUS: 180,
+  ORBIT_RADIUS: 185,
   ORBIT_DAMP: 0.12,
   ORBIT_SENS: { theta: 0.008, phi: 0.006 },
   PHI_MIN: 0.25, PHI_MAX: Math.PI - 0.25,
 
-  // Sections (titles)
-  SECTIONS: ["Samuel Goldman","Welcome","Work","About","Contact"],
+  // Sections (Welcome is now a subtitle of START)
+  SECTIONS: ["Samuel Goldman","Work","About","Contact"],
 
   // Text sampling
   CANVAS_W: 2800,
-  STEP: 3,                // lower = denser
-  THICKNESS: 5,           // depth jitter
+  STEP: 3,
+  THICKNESS: 5,
 
   // Morph
   ATTRACT: 0.022,
   MORPH_RATE: 0.03,
 
-  // Sizes
-  DOT_TITLE: 0.52,
-  DOT_SWARM: 0.28,
-  DOT_AMBI:  0.24,
+  // Sizes (brighter/clearer)
+  DOT_TITLE: 0.62,
+  DOT_SWARM: 0.34,
+  DOT_AMBI:  0.32,
 
   // Mouse field
-  FIELD_RADIUS: 20,
-  FIELD_FORCE: 0.28,
+  FIELD_RADIUS: 22,
+  FIELD_FORCE: 0.32,
 
   // Fit & margins (menu on RIGHT)
   TEXT_MARGIN: 0.90,
+
+  // Start subtitle settings
+  SUB_SCALE: 0.48,          // Welcome size relative to main
+  SUB_GAP:   0.22           // gap relative to main height
 };
 
-/* ---------------------- SCENE ---------------------- */
+/* ================= SCENE ================= */
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x000102, 0.009);
+scene.fog = new THREE.FogExp2(0x000102, 0.0065);
 
 const camera = new THREE.PerspectiveCamera(CONFIG.CAMERA_FOV, innerWidth/innerHeight, 0.1, 12000);
 const pivot = new THREE.Object3D(); scene.add(pivot);
@@ -136,12 +132,16 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setClearColor(0x000204, 1);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+/* Make particles pop */
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.45;
 document.body.appendChild(renderer.domElement);
 
 scene.add(new THREE.AmbientLight(0x0a120f, 1));
 
-/* ---------------------- UTILS ---------------------- */
-const hsl = (h,s,l)=>{ // h[0..1], s[0..1], l[0..1] -> [r,g,b]
+/* ================= HELPERS ================= */
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const hsl = (h,s,l)=>{ // [0..1] h,s,l -> [r,g,b]
   let r,g,b;
   if(s===0){ r=g=b=l; }
   else{
@@ -152,73 +152,46 @@ const hsl = (h,s,l)=>{ // h[0..1], s[0..1], l[0..1] -> [r,g,b]
   }
   return [r,g,b];
 };
-const rnd=(a,b)=>a+Math.random()*(b-a);
 
-/* ---------------------- FRACTAL / TIE-DYE BACKGROUND ---------------------- */
-/* Huge inside-out sphere with a tie-dye-y fractal shader. Hue subtly shifts with orbit angle. */
+/* ================= FRACTAL TIE-DYE BACKGROUND ================= */
 const nebulaUniforms = { uTime:{value:0}, uHueShift:{value:0.0}, uIntensity:{value:0.55} };
 const nebulaMat = new THREE.ShaderMaterial({
   side: THREE.BackSide, uniforms: nebulaUniforms,
-  vertexShader: `
-    varying vec3 vPos;
-    void main(){ vPos = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }
-  `,
+  vertexShader: `varying vec3 vPos; void main(){ vPos=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);} `,
   fragmentShader: `
-    precision highp float;
-    varying vec3 vPos;
-    uniform float uTime, uHueShift, uIntensity;
-
-    // Simple fbm-ish field
+    precision highp float; varying vec3 vPos; uniform float uTime, uHueShift, uIntensity;
     float hash(vec3 p){ return fract(sin(dot(p, vec3(17.1,113.5,27.9))) * 43758.5453123); }
-    float noise(vec3 p){
-      vec3 i = floor(p), f = fract(p);
+    float noise(vec3 p){ vec3 i=floor(p), f=fract(p);
       float n = mix(mix(mix(hash(i+vec3(0,0,0)), hash(i+vec3(1,0,0)), f.x),
                         mix(hash(i+vec3(0,1,0)), hash(i+vec3(1,1,0)), f.x), f.y),
                     mix(mix(hash(i+vec3(0,0,1)), hash(i+vec3(1,0,1)), f.x),
                         mix(hash(i+vec3(0,1,1)), hash(i+vec3(1,1,1)), f.x), f.y), f.z);
       return n;
     }
-    float fbm(vec3 p){
-      float f=0., a=0.55; 
-      for(int i=0;i<6;i++){ f += a*noise(p); p = p*2.02 + vec3(.13,.11,-.17); a *= .55; }
-      return f;
-    }
-    vec3 hsl2rgb(vec3 hsl){
-      float h=hsl.x, s=hsl.y, l=hsl.z;
-      float c=(1.-abs(2.*l-1.))*s;
-      float x=c*(1.-abs(mod(h*6.,2.)-1.));
-      float m=l-.5*c;
-      vec3 rgb;
-      if(h<1./6.) rgb=vec3(c,x,0.);
-      else if(h<2./6.) rgb=vec3(x,c,0.);
-      else if(h<3./6.) rgb=vec3(0.,c,x);
-      else if(h<4./6.) rgb=vec3(0.,x,c);
-      else if(h<5./6.) rgb=vec3(x,0.,c);
-      else rgb=vec3(c,0.,x);
-      return rgb + m;
-    }
+    float fbm(vec3 p){ float f=0., a=0.55; for(int i=0;i<6;i++){ f += a*noise(p); p = p*2.02 + vec3(.13,.11,-.17); a *= .55; } return f; }
+    vec3 hsl2rgb(vec3 hsl){ float h=hsl.x,s=hsl.y,l=hsl.z; float c=(1.-abs(2.*l-1.))*s; float x=c*(1.-abs(mod(h*6.,2.)-1.)); float m=l-.5*c;
+      vec3 rgb; if(h<1./6.) rgb=vec3(c,x,0.); else if(h<2./6.) rgb=vec3(x,c,0.); else if(h<3./6.) rgb=vec3(0.,c,x);
+      else if(h<4./6.) rgb=vec3(0.,x,c); else if(h<5./6.) rgb=vec3(x,0.,c); else rgb=vec3(c,0.,x); return rgb + m; }
     void main(){
       vec3 p = normalize(vPos)*2.0;
       float f = fbm(p*2.0 + vec3(0.,0.,uTime*0.03));
-      // Tie-dye color bands
       float bands = sin((p.x+p.y+p.z)*4.0 + uTime*0.15) * .5 + .5;
       float hue = fract(bands*0.8 + f*0.3 + uHueShift);
-      vec3 col = hsl2rgb(vec3(hue, 0.85, 0.25 + 0.35*(f)));
+      vec3 col = hsl2rgb(vec3(hue, 0.85, 0.28 + 0.38*(f)));
       col = mix(vec3(0.0), col, uIntensity);
       gl_FragColor = vec4(col, 1.0);
-    }
-  `
+    }`
 });
-const nebula = new THREE.Mesh(new THREE.SphereGeometry(4200,64,64), nebulaMat);
+const nebula = new THREE.Mesh(new THREE.SphereGeometry(4600,64,64), nebulaMat);
 pivot.add(nebula);
 
-/* ---------------------- DOT TEXTURE (soft white core, faint green halo) ---------------------- */
-function makeDotTexture(size=96){
+/* ================= DOT TEXTURE (bright core + glow) ================= */
+function makeDotTexture(size=128){
   const c=document.createElement("canvas"); c.width=c.height=size; const g=c.getContext("2d");
   const r=size/2, grad=g.createRadialGradient(r,r,0,r,r,r);
   grad.addColorStop(0.00,"rgba(255,255,255,1)");
-  grad.addColorStop(0.55,"rgba(255,255,255,.92)");
-  grad.addColorStop(0.80,"rgba(120,255,190,.28)");
+  grad.addColorStop(0.50,"rgba(255,255,255,1)");
+  grad.addColorStop(0.72,"rgba(120,255,190,.45)");  /* stronger halo */
   grad.addColorStop(1.00,"rgba(120,255,190,0)");
   g.fillStyle=grad; g.beginPath(); g.arc(r,r,r,0,Math.PI*2); g.fill();
   const tex=new THREE.CanvasTexture(c);
@@ -227,10 +200,10 @@ function makeDotTexture(size=96){
 }
 const dotTex = makeDotTexture();
 
-/* ---------------------- STAGE (always faces camera) ---------------------- */
+/* ================= STAGE (titles) ================= */
 const stage = new THREE.Object3D(); pivot.add(stage);
 
-/* ---------------------- AMBIENT CLOUD (full-screen, multi-color) ---------------------- */
+/* ================= AMBIENT CLOUD (multi-color, brighter, many more) ================= */
 const ambCount = CONFIG.AMBIENT_COUNT;
 const ambPos = new Float32Array(ambCount*3);
 const ambCol = new Float32Array(ambCount*3);
@@ -239,13 +212,12 @@ for(let i=0;i<ambCount;i++){
   const j=i*3;
   ambPos[j+0]=rnd(-CONFIG.BOX,CONFIG.BOX);
   ambPos[j+1]=rnd(-CONFIG.BOX,CONFIG.BOX);
-  ambPos[j+2]=rnd(-560,560);
+  ambPos[j+2]=rnd(-600,600);
   ambVel[j+0]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   ambVel[j+1]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   ambVel[j+2]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
-
-  // Multi-color tie-dye hues (soft, semi-opaque)
-  const hue = Math.random(); const sat = 0.7 + Math.random()*0.3; const light = 0.45 + Math.random()*0.25;
+  /* brighter hues */
+  const hue = Math.random(); const sat = 0.85 + Math.random()*0.15; const light = 0.60 + Math.random()*0.25;
   const [r,g,b] = hsl(hue, sat, light);
   ambCol[j+0]=r; ambCol[j+1]=g; ambCol[j+2]=b;
 }
@@ -253,13 +225,13 @@ const ambGeom = new THREE.BufferGeometry();
 ambGeom.setAttribute("position", new THREE.BufferAttribute(ambPos,3));
 ambGeom.setAttribute("color",   new THREE.BufferAttribute(ambCol,3));
 const ambMat = new THREE.PointsMaterial({
-  size:CONFIG.DOT_AMBI, map:dotTex, transparent:true, opacity:0.78, depthWrite:false,
-  blending:THREE.AdditiveBlending, vertexColors:true, alphaTest:0.01
+  size:CONFIG.DOT_AMBI, map:dotTex, transparent:true, opacity:0.92,
+  depthWrite:false, blending:THREE.AdditiveBlending, vertexColors:true, alphaTest:0.0
 });
 const ambientPoints = new THREE.Points(ambGeom, ambMat);
 scene.add(ambientPoints);
 
-/* ---------------------- SWARM RING (small dots, colorful) ---------------------- */
+/* ================= SWARM RING (small, colorful) ================= */
 const swarmCount = CONFIG.SWARM_COUNT;
 const swarmPos = new Float32Array(swarmCount*3);
 const swarmCol = new Float32Array(swarmCount*3);
@@ -269,24 +241,23 @@ const swarmSpeed = new Float32Array(swarmCount);
 const swarmYOff = new Float32Array(swarmCount);
 for(let i=0;i<swarmCount;i++){
   const j=i*3;
-  const r = rnd(24, 84), th = rnd(0, Math.PI*2), sp = rnd(0.05, 0.22), yoff = rnd(-18, 18);
+  const r = rnd(24, 88), th = rnd(0, Math.PI*2), sp = rnd(0.05, 0.22), yoff = rnd(-18, 18);
   swarmRad[i]=r; swarmTheta[i]=th; swarmSpeed[i]=sp; swarmYOff[i]=yoff;
   swarmPos[j+0]=Math.cos(th)*r; swarmPos[j+1]=yoff; swarmPos[j+2]=Math.sin(th)*r;
-
-  const hue = Math.random(); const [rC,gC,bC] = hsl(hue, 0.9, 0.6);
+  const hue = Math.random(); const [rC,gC,bC] = hsl(hue, 0.95, 0.68);
   swarmCol[j+0]=rC; swarmCol[j+1]=gC; swarmCol[j+2]=bC;
 }
 const swarmGeom = new THREE.BufferGeometry();
 swarmGeom.setAttribute("position", new THREE.BufferAttribute(swarmPos,3));
 swarmGeom.setAttribute("color",    new THREE.BufferAttribute(swarmCol,3));
 const swarmMat = new THREE.PointsMaterial({
-  size:CONFIG.DOT_SWARM, map:dotTex, transparent:true, opacity:0.85, depthWrite:false,
-  blending:THREE.AdditiveBlending, vertexColors:true, alphaTest:0.01
+  size:CONFIG.DOT_SWARM, map:dotTex, transparent:true, opacity:0.95,
+  depthWrite:false, blending:THREE.AdditiveBlending, vertexColors:true, alphaTest:0.0
 });
 const swarmPoints = new THREE.Points(swarmGeom, swarmMat);
 stage.add(swarmPoints);
 
-/* ---------------------- TITLE PARTICLES (dense, tie-dye) ---------------------- */
+/* ================= TITLE PARTICLES (dense, tie-dye) ================= */
 const shapeCount = CONFIG.SHAPE_COUNT;
 const pos = new Float32Array(shapeCount*3);
 const vel = new Float32Array(shapeCount*3);
@@ -299,44 +270,35 @@ for(let i=0;i<shapeCount;i++){
   vel[j+0]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   vel[j+1]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   vel[j+2]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
-
-  // Pre-assign vibrant tie-dye colors; final color distribution depends on assigned target (x, y)
-  const hue = Math.random(); const [rC,gC,bC] = hsl(hue, 0.95, 0.58);
+  const hue = Math.random(); const [rC,gC,bC] = hsl(hue, 1.0, 0.72); // brighter tie-dye
   col[j+0]=rC; col[j+1]=gC; col[j+2]=bC;
 }
 const shapeGeom = new THREE.BufferGeometry();
 shapeGeom.setAttribute("position", new THREE.BufferAttribute(pos,3));
 shapeGeom.setAttribute("color",    new THREE.BufferAttribute(col,3));
 const shapeMat = new THREE.PointsMaterial({
-  size:CONFIG.DOT_TITLE, map:dotTex, transparent:true, opacity:0.98, depthWrite:false,
-  blending:THREE.AdditiveBlending, vertexColors:true, alphaTest:0.01
+  size:CONFIG.DOT_TITLE, map:dotTex, transparent:true, opacity:1.0,
+  depthWrite:false, blending:THREE.AdditiveBlending, vertexColors:true, alphaTest:0.0
 });
 const shapePoints = new THREE.Points(shapeGeom, shapeMat);
 stage.add(shapePoints);
-shapeGeom.computeBoundingSphere();
 const targets = new Float32Array(shapeCount*3);
 const morphState = { progress:1 };
 
-/* ---------------------- FIT HELPERS (menu on RIGHT) ---------------------- */
-function frustumWorldWidth(){
-  const f = THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV);
-  return 2*CONFIG.ORBIT_RADIUS*Math.tan(f/2)*(innerWidth/innerHeight);
-}
-function frustumWorldHeight(){
-  const f = THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV);
-  return 2*CONFIG.ORBIT_RADIUS*Math.tan(f/2);
-}
+/* ================= FIT HELPERS (menu on RIGHT) ================= */
+function frustumWorldWidth(){ const f=THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV); return 2*CONFIG.ORBIT_RADIUS*Math.tan(f/2)*(innerWidth/innerHeight); }
+function frustumWorldHeight(){ const f=THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV); return 2*CONFIG.ORBIT_RADIUS*Math.tan(f/2); }
 function safeArea(){
   const railPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rail-w')) || 240;
   const worldPerPx = frustumWorldWidth() / innerWidth;
   const railW = railPx * worldPerPx;
   const W = frustumWorldWidth()  - railW * 2.1;      // extra margin for right rail
-  const H = frustumWorldHeight() * 0.76;
-  const centerX = -railW * 1.0;                       // shift LEFT away from the right rail
+  const H = frustumWorldHeight() * 0.78;
+  const centerX = -railW * 1.0;                      // shift LEFT away from right rail
   return { safeW: Math.max(28,W)*CONFIG.TEXT_MARGIN, safeH: Math.max(12,H)*CONFIG.TEXT_MARGIN, centerX };
 }
 
-/* ---------------------- TEXT SAMPLING (FILLED) ---------------------- */
+/* ================= TEXT SAMPLING ================= */
 function sampleText(text){
   const W=CONFIG.CANVAS_W, H=Math.round(W*0.22);
   const cnv=document.createElement("canvas"); cnv.width=W; cnv.height=H;
@@ -361,108 +323,124 @@ function sampleText(text){
   const normPts = pts.map(([x,y])=>[(x-cx)/W, (cy-y)/W]);
   return { normPts, wNorm:Math.max(wNorm,1e-4), hNorm:Math.max(hNorm,1e-4) };
 }
+
+/* Precompute glyph point clouds */
 const NORM = {};
-const SECT = { START:0, WELCOME:1, WORK:2, ABOUT:3, CONTACT:4 };
+const SECT = { START:0, WORK:1, ABOUT:2, CONTACT:3 };
 let section = SECT.START;
 
-/* Build text once fonts are ready */
 async function prepareText(){
   try{ await document.fonts.load('900 120px "Orbitron"'); await document.fonts.ready; }catch(e){}
-  NORM[SECT.START]   = sampleText("Samuel Goldman");
-  NORM[SECT.WELCOME] = sampleText("Welcome");
-  NORM[SECT.WORK]    = sampleText("Work");
-  NORM[SECT.ABOUT]   = sampleText("About");
-  NORM[SECT.CONTACT] = sampleText("Contact");
+  NORM.main = sampleText("Samuel Goldman");
+  NORM.sub  = sampleText("Welcome");     // subtitle for START only
+  NORM.work = sampleText("Work");
+  NORM.about= sampleText("About");
+  NORM.contact=sampleText("Contact");
   assignTargetsFor(section);
-  // double-pass in case font settles a moment later
-  setTimeout(()=>{ 
-    NORM[SECT.START]   = sampleText("Samuel Goldman");
-    NORM[SECT.WELCOME] = sampleText("Welcome");
-    NORM[SECT.WORK]    = sampleText("Work");
-    NORM[SECT.ABOUT]   = sampleText("About");
-    NORM[SECT.CONTACT] = sampleText("Contact");
+  setTimeout(()=>{ // second pass just in case font finishes a bit later
+    NORM.main = sampleText("Samuel Goldman");
+    NORM.sub  = sampleText("Welcome");
+    NORM.work = sampleText("Work");
+    NORM.about= sampleText("About");
+    NORM.contact=sampleText("Contact");
     assignTargetsFor(section);
   }, 400);
 }
 
-/* Map normalized points → world with RIGHT-rail safe fit */
+/* Assign targets; START = main + subtitle stacked */
 function assignTargetsFor(idx){
-  const data = NORM[idx]; if(!data) return;
-  const { normPts, wNorm, hNorm } = data;
   const { safeW, safeH, centerX } = safeArea();
+  pivot.position.x = centerX;
 
-  pivot.position.x = centerX; // keep away from right rail
+  let pool = [];
+  if(idx===SECT.START){
+    const M=NORM.main, S=NORM.sub;
+    if(!M || !S) return;
 
-  const scale = Math.min(safeW / wNorm, safeH / hNorm);
+    // Compute combined scaling so BOTH lines fit (width and height)
+    const subScaleRel = CONFIG.SUB_SCALE;
+    const combinedW = Math.max(M.wNorm, S.wNorm*subScaleRel);
+    const combinedHNorm = M.hNorm + (M.hNorm*CONFIG.SUB_GAP) + (S.hNorm*subScaleRel);
+    const scale = Math.min(safeW/combinedW, safeH/combinedHNorm);
+
+    const mainScale = scale;
+    const subScale  = scale*subScaleRel;
+
+    const mainH = M.hNorm*mainScale;
+    const subH  = S.hNorm*subScale;
+    const gap   = M.hNorm*CONFIG.SUB_GAP*scale;
+
+    // Center the group vertically around 0
+    const mainY = (subH + gap)/2;
+    const subY  = -(mainH + gap)/2;
+
+    // Map points into world
+    const jitter = CONFIG.THICKNESS*2;
+    for(const t of M.normPts){
+      pool.push([ t[0]*mainScale, t[1]*mainScale + mainY, (Math.random()-0.5)*jitter ]);
+    }
+    for(const t of S.normPts){
+      pool.push([ t[0]*subScale,  t[1]*subScale  + subY,  (Math.random()-0.5)*jitter ]);
+    }
+  } else {
+    const map = [null, NORM.work, NORM.about, NORM.contact];
+    const D = map[idx]; if(!D) return;
+    const scale = Math.min(safeW / D.wNorm, safeH / D.hNorm);
+    const jitter = CONFIG.THICKNESS*2;
+    for(const t of D.normPts){
+      pool.push([ t[0]*scale, t[1]*scale, (Math.random()-0.5)*jitter ]);
+    }
+  }
+
+  // Fill targets from pool
   for(let i=0;i<shapeCount;i++){
-    const t = normPts[(Math.random()*normPts.length)|0], j=i*3;
-    targets[j+0] = t[0]*scale;
-    targets[j+1] = t[1]*scale;
-    targets[j+2] = THREE.MathUtils.randFloatSpread(CONFIG.THICKNESS*2);
+    const pick = pool[(Math.random()*pool.length)|0];
+    const j=i*3;
+    targets[j+0]=pick[0];
+    targets[j+1]=pick[1];
+    targets[j+2]=pick[2];
   }
   morphState.progress = 0;
 }
 
-/* ---------------------- ORBIT (360° drag) ---------------------- */
-let theta=0, phi=Math.PI/2, tTheta=0, tPhi=Math.PI/2, dragging=false, moved=false, lastX=0, lastY=0;
+/* ================= ORBIT (360° drag) ================= */
+let theta=0, phi=Math.PI/2, tTheta=0, tPhi=Math.PI/2, dragging=false, lastX=0, lastY=0;
 function updateCamera(){
   theta += (tTheta - theta) * CONFIG.ORBIT_DAMP;
   phi   += (tPhi   - phi)   * CONFIG.ORBIT_DAMP;
   const r=CONFIG.ORBIT_RADIUS;
   const x=r*Math.sin(phi)*Math.sin(theta), y=r*Math.cos(phi), z=r*Math.sin(phi)*Math.cos(theta);
   camHolder.position.set(x,y,z); camera.lookAt(pivot.position);
-  // billboard: titles always face the camera (prevents skew & clipping)
-  stage.quaternion.copy(camera.quaternion);
-
-  // Shift background hues based on orbit angle (reveal different tie-dye scenes)
-  nebulaUniforms.uHueShift.value = (theta/ (Math.PI*2)) % 1.0;
+  stage.quaternion.copy(camera.quaternion); // keep titles readable
+  nebulaUniforms.uHueShift.value = (theta/ (Math.PI*2)) % 1.0; // different tie-dye scenes as you rotate
 }
-
-addEventListener("pointerdown",(e)=>{
-  if(e.target.closest('.rail')) return;
-  dragging=true; moved=false; lastX=e.clientX; lastY=e.clientY;
-});
-addEventListener("pointermove",(e)=>{
-  if(!dragging) return;
-  const dx=e.clientX-lastX, dy=e.clientY-lastY; if(Math.abs(dx)+Math.abs(dy)>2)moved=true;
-  tTheta -= dx*CONFIG.ORBIT_SENS.theta; tPhi -= dy*CONFIG.ORBIT_SENS.phi; 
-  tPhi = THREE.MathUtils.clamp(tPhi, CONFIG.PHI_MIN, CONFIG.PHI_MAX);
-  lastX=e.clientX; lastY=e.clientY;
-});
+addEventListener("pointerdown",(e)=>{ if(e.target.closest('.rail')) return; dragging=true; lastX=e.clientX; lastY=e.clientY; });
+addEventListener("pointermove",(e)=>{ if(!dragging) return; const dx=e.clientX-lastX, dy=e.clientY-lastY; tTheta -= dx*CONFIG.ORBIT_SENS.theta; tPhi -= dy*CONFIG.ORBIT_SENS.phi; tPhi = THREE.MathUtils.clamp(tPhi, CONFIG.PHI_MIN, CONFIG.PHI_MAX); lastX=e.clientX; lastY=e.clientY; });
 addEventListener("pointerup",()=>{ dragging=false; });
-
-/* prevent page scroll wheel; scene is fully structured by orbit */
 addEventListener("wheel", e=>e.preventDefault(), { passive:false });
 
-/* ---------------------- MOUSE FIELD (ambient reacts) ---------------------- */
+/* ================= MOUSE FIELD (ambient reacts) ================= */
 const raycaster=new THREE.Raycaster(); let mouseNDC=new THREE.Vector2(); let fieldPos=new THREE.Vector3(0,0,0);
-addEventListener("pointermove",(e)=>{ const r=renderer.domElement.getBoundingClientRect();
-  mouseNDC.x=((e.clientX-r.left)/r.width)*2-1; mouseNDC.y=-((e.clientY-r.top)/r.height)*2+1;
-});
-function updateMouseField(){
-  const plane=new THREE.Plane(), dir=new THREE.Vector3(); camera.getWorldDirection(dir);
-  plane.setFromNormalAndCoplanarPoint(dir, pivot.position);
-  raycaster.setFromCamera(mouseNDC, camera); raycaster.ray.intersectPlane(plane, fieldPos);
-}
+addEventListener("pointermove",(e)=>{ const r=renderer.domElement.getBoundingClientRect(); mouseNDC.x=((e.clientX-r.left)/r.width)*2-1; mouseNDC.y=-((e.clientY-r.top)/r.height)*2+1; });
+function updateMouseField(){ const plane=new THREE.Plane(), dir=new THREE.Vector3(); camera.getWorldDirection(dir); plane.setFromNormalAndCoplanarPoint(dir, pivot.position); raycaster.setFromCamera(mouseNDC, camera); raycaster.ray.intersectPlane(plane, fieldPos); }
 
-/* ---------------------- NAVIGATION (right menu) ---------------------- */
+/* ================= NAV (right menu) ================= */
 function setSection(to){
   section = to;
-  document.querySelectorAll('.vnav button').forEach(b=>{
-    b.classList.toggle('active', b.dataset.key === ["start","welcome","work","about","contact"][section]);
-  });
+  const keys=["start","work","about","contact"];
+  document.querySelectorAll('.vnav button').forEach(b=>b.classList.toggle('active', b.dataset.key===keys[section]));
   assignTargetsFor(section);
 }
 document.querySelectorAll('.vnav button').forEach(btn=>{
-  btn.addEventListener('click', ()=> setSection({start:0,welcome:1,work:2,about:3,contact:4}[btn.dataset.key]));
+  btn.addEventListener('click', ()=> setSection({start:0,work:1,about:2,contact:3}[btn.dataset.key]));
 });
 addEventListener("keydown",(e)=>{
-  if(e.key==="ArrowRight" || e.key==="PageDown") setSection(Math.min(4, section+1));
+  if(e.key==="ArrowRight" || e.key==="PageDown") setSection(Math.min(3, section+1));
   if(e.key==="ArrowLeft"  || e.key==="PageUp")   setSection(Math.max(0, section-1));
 });
 
-/* ---------------------- ANIMATION LOOP ---------------------- */
-const ambPosAttr=ambGeom.attributes.position, ambColAttr=ambGeom.attributes.color;
+/* ================= ANIMATE ================= */
+const ambPosAttr=ambGeom.attributes.position;
 const swarmPosAttr=swarmGeom.attributes.position;
 const shapePosAttr=shapeGeom.attributes.position;
 const clock=new THREE.Clock();
@@ -474,33 +452,29 @@ function animate(){
 
   updateCamera(); updateMouseField();
 
-  // Ambient cloud (wander + mouse field + wrap)
-  const r2 = CONFIG.FIELD_RADIUS*CONFIG.FIELD_RADIUS;
+  // Ambient (brighter, dense)
+  const r2=CONFIG.FIELD_RADIUS*CONFIG.FIELD_RADIUS;
   for(let i=0;i<ambCount;i++){
     const j=i*3;
-    // tiny random walk
+    // random walk
     ambVel[j+0]=ambVel[j+0]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
     ambVel[j+1]=ambVel[j+1]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
     ambVel[j+2]=ambVel[j+2]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
-
-    // soft push away from mouse field center
+    // push from mouse field
     const dx=ambPos[j+0]-fieldPos.x, dy=ambPos[j+1]-fieldPos.y, dz=ambPos[j+2]-fieldPos.z;
-    const d2=dx*dx+dy*dy+dz*dz;
-    if(d2<r2){ const f=(1 - d2/r2)*CONFIG.FIELD_FORCE; ambVel[j+0]+=dx*f*dt*28; ambVel[j+1]+=dy*f*dt*28; ambVel[j+2]+=dz*f*dt*28; }
-
-    // integrate + toroidal wrap
+    const d2=dx*dx+dy*dy+dz*dz; if(d2<r2){ const f=(1-d2/r2)*CONFIG.FIELD_FORCE; ambVel[j+0]+=dx*f*dt*30; ambVel[j+1]+=dy*f*dt*30; ambVel[j+2]+=dz*f*dt*30; }
+    // integrate + wrap
     ambPos[j+0]+=ambVel[j+0]; ambPos[j+1]+=ambVel[j+1]; ambPos[j+2]+=ambVel[j+2];
-    const B=CONFIG.BOX, Zmin=-560, Zmax=560;
+    const B=CONFIG.BOX, Zmin=-600, Zmax=600;
     if(ambPos[j+0]<-B) ambPos[j+0]+=2*B; else if(ambPos[j+0]>B) ambPos[j+0]-=2*B;
     if(ambPos[j+1]<-B) ambPos[j+1]+=2*B; else if(ambPos[j+1]>B) ambPos[j+1]-=2*B;
     if(ambPos[j+2]<Zmin) ambPos[j+2]=Zmax; else if(ambPos[j+2]>Zmax) ambPos[j+2]=Zmin;
   }
   ambPosAttr.needsUpdate = true;
 
-  // Swarm ring motion
+  // Swarm ring
   for(let i=0;i<swarmCount;i++){
-    const j=i*3;
-    swarmTheta[i]+=swarmSpeed[i]*0.01;
+    const j=i*3; swarmTheta[i]+=swarmSpeed[i]*0.01;
     const r = swarmRad[i]*(1.0+0.06*Math.sin(swarmTheta[i]*1.7+i*0.13));
     swarmPos[j+0]=Math.cos(swarmTheta[i])*r;
     swarmPos[j+1]=swarmYOff[i]*(1.0 + 0.25*Math.sin(swarmTheta[i]*0.7 + i*0.09));
@@ -508,7 +482,7 @@ function animate(){
   }
   swarmPosAttr.needsUpdate = true;
 
-  // Title morph (one decisive pull)
+  // Morph to current title
   if(morphState.progress<1) morphState.progress=Math.min(1, morphState.progress+CONFIG.MORPH_RATE);
   for(let i=0;i<shapeCount;i++){
     const j=i*3, m=morphState.progress;
@@ -524,13 +498,10 @@ function animate(){
 }
 animate();
 
-/* ---------------------- INIT TEXT ---------------------- */
+/* ================= INIT TEXT & RESIZE ================= */
 prepareText();
-
-/* ---------------------- RESIZE ---------------------- */
 addEventListener("resize", ()=>{
-  camera.aspect = innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   assignTargetsFor(section);
 });
