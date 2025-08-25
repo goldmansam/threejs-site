@@ -1,224 +1,166 @@
-// Zoom Tunnel + Pixelation (no libs)
-// - Renders particles (a star tunnel) to an offscreen canvas at device resolution.
-// - Copies the offscreen into the visible canvas at reduced size to create pixelation.
-// - Mouse wheel adjusts speed; hold mouse to boost; click triggers a pixelation "blast".
+// Inspired-by “chaptered garden” UX: section progress, parallax, reveals, and a subtle pixelation pulse.
+// Keep assets in /assets (hero.jpg, work.jpg, about.jpg, contact.jpg, thumbs, demo.mp3).
 
 (() => {
-  const display = document.getElementById("stage");
-  const dCtx = display.getContext("2d", { alpha: false });
+  const chapters = [...document.querySelectorAll(".chapter")];
+  const progressEls = chapters.map(s => s.querySelector(".progress"));
+  const parallaxEls = [...document.querySelectorAll(".parallax")];
 
-  // Offscreen canvas where we actually draw the scene at full resolution
-  const scene = document.createElement("canvas");
-  const sCtx = scene.getContext("2d", { alpha: false });
+  // Reveal on scroll
+  const revObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) e.target.classList.add("in");
+    });
+  }, { threshold: 0.2 });
+  document.querySelectorAll(".reveal").forEach(el => revObs.observe(el));
 
-  let DPR = Math.min(window.devicePixelRatio || 1, 2); // cap DPR for perf
-  let W = 0, H = 0; // internal pixel size
-  let running = true;
+  // Section progress (“You’ve discovered X%”)
+  // We approximate per-section progress by how much of it has crossed the viewport
+  const winH = () => window.innerHeight || document.documentElement.clientHeight;
+  function updateProgress() {
+    const vh = winH();
+    chapters.forEach((sec, i) => {
+      const rect = sec.getBoundingClientRect();
+      const total = rect.height + vh;    // how much travel from top enters to bottom leaves
+      const seen = Math.min(Math.max(vh - rect.top, 0), total);
+      const pct = Math.round((seen / total) * 100);
+      if (progressEls[i]) progressEls[i].textContent = `You’ve discovered ${pct}% of this chapter`;
+    });
+  }
 
-  // Starfield params
-  let stars = [];
-  let starCount = 1200;     // will scale with size below
-  const depth = 12;         // "distance" range (larger = deeper tunnel)
-  let baseSpeed = 0.015;    // baseline z-advance per frame
-  let targetSpeed = baseSpeed;
-  let speed = baseSpeed;
+  // Parallax backgrounds
+  function updateParallax() {
+    const vh = winH();
+    parallaxEls.forEach(el => {
+      const speed = parseFloat(el.dataset.speed || "0.1");
+      const r = el.parentElement.getBoundingClientRect();
+      // move only when in view
+      if (r.bottom > 0 && r.top < vh) {
+        const t = (vh/2 - (r.top + r.height/2));
+        el.style.transform = `translateY(${t * speed}px) scale(1.02)`;
+      }
+    });
+  }
 
-  // Pixelation params
-  let pixelSize = 1;          // 1 = no pixelation; >1 = chunk size
-  let pixelTarget = 1;
-  let pixelMin = 1;
-  let pixelMax = 28;          // how chunky the click blast gets
-  let pixelBlastActive = false;
+  // Minimal audio player
+  const audio = document.getElementById("audio");
+  const playBtn = document.getElementById("playBtn");
+  if (audio && playBtn) {
+    playBtn.addEventListener("click", () => {
+      if (audio.paused) { audio.play(); playBtn.textContent = "Pause"; }
+      else { audio.pause(); playBtn.textContent = "Play"; }
+    });
+  }
 
-  // Boost params
-  let boosting = false;
-  const boostSpeed = 0.15;
+  // Pixelation FX canvas over the hero
+  const fx = document.getElementById("fx");
+  const secIntro = document.getElementById("intro");
+  const ctx = fx.getContext("2d", { alpha: false });
+  let W=0, H=0, DPR=1;
+  let pixelSize = 1, pixelTarget = 1;
+  const pixelMin = 1, pixelMax = 24;
 
-  // Resize setup
   function resize() {
     DPR = Math.min(window.devicePixelRatio || 1, 2);
-    const { clientWidth: cw, clientHeight: ch } = display;
-
-    W = Math.max(1, Math.floor(cw * DPR));
-    H = Math.max(1, Math.floor(ch * DPR));
-
-    // Size the visible canvas (CSS size stays responsive)
-    display.width = W; display.height = H;
-
-    // Size the offscreen canvas at the same internal resolution
-    scene.width = W; scene.height = H;
-
-    // Adjust star count by area (keep density constant-ish)
-    const density = 0.045; // tweak for your machine; higher = more stars
-    starCount = Math.floor((W * H) / (10000 / density));
-    makeStars();
+    const rect = secIntro.getBoundingClientRect();
+    const w = Math.max(1, Math.floor(rect.width * DPR));
+    const h = Math.max(1, Math.floor(rect.height * DPR));
+    W = w; H = h;
+    fx.width = W; fx.height = H;
+    fx.style.width = rect.width + "px";
+    fx.style.height = rect.height + "px";
   }
 
-  // Create stars distributed within a square tunnel, with z in (0..depth]
-  function makeStars() {
-    stars = new Array(starCount).fill(0).map(() => spawnStar());
+  function drawFx() {
+    // Render a simple grainy gradient as the “source”, then downscale-upscale for pixelation
+    ctx.imageSmoothingEnabled = false;
+
+    // Compose gradient tile
+    const off = document.createElement("canvas");
+    off.width = Math.max(2, Math.floor(W / 2));
+    off.height = Math.max(2, Math.floor(H / 2));
+    const oc = off.getContext("2d", { alpha: false });
+
+    const g = oc.createLinearGradient(0, 0, off.width, off.height);
+    g.addColorStop(0, "#0b0b0c");
+    g.addColorStop(1, "#101216");
+    oc.fillStyle = g;
+    oc.fillRect(0, 0, off.width, off.height);
+
+    // light bloom dots
+    for (let i=0; i<40; i++) {
+      const x = Math.random() * off.width;
+      const y = Math.random() * off.height;
+      const r = 8 + Math.random() * 30;
+      const a = 0.02 + Math.random() * 0.05;
+      oc.fillStyle = `rgba(220,240,255,${a})`;
+      oc.beginPath(); oc.arc(x,y,r,0,Math.PI*2); oc.fill();
+    }
+
+    // Pixelation step
+    const chunk = Math.max(1, Math.floor(pixelSize));
+    const dw = Math.max(1, Math.floor(W / chunk));
+    const dh = Math.max(1, Math.floor(H / chunk));
+    // draw to fx with pixelation
+    ctx.clearRect(0,0,W,H);
+    ctx.drawImage(off, 0, 0, off.width, off.height, 0, 0, dw, dh);
+    // scale up to cover
+    // draw fx canvas onto itself (cheeky but fine)
+    const data = ctx.getImageData(0,0,dw,dh);
+    ctx.clearRect(0,0,W,H);
+    // put the low-res data onto a temp then scale
+    const tmp = document.createElement("canvas");
+    tmp.width = dw; tmp.height = dh;
+    tmp.getContext("2d").putImageData(data, 0, 0);
+    ctx.drawImage(tmp, 0, 0, dw, dh, 0, 0, W, H);
+
+    requestAnimationFrame(drawFx);
   }
 
-  function spawnStar() {
-    // Random x/y in a [-1, 1] square, then scale by viewport to avoid edges going empty
-    const spread = 1.4;
-    const x = (Math.random() * 2 - 1) * spread;
-    const y = (Math.random() * 2 - 1) * spread;
-    const z = Math.random() * depth + 0.0001;
-    return { x, y, z };
-  }
-
-  function ease(current, to, rate) {
-    return current + (to - current) * rate;
-  }
-
-  function animatePixelBlast() {
-    // Animate pixelation up, then back down
-    pixelBlastActive = true;
-    pixelTarget = pixelMax;
-
-    // Up ramp
-    let upT = 0;
-    const up = () => {
-      if (upT < 1) {
-        upT += 0.08;
-        pixelTarget = pixelMin + (pixelMax - pixelMin) * Math.min(upT, 1);
-        requestAnimationFrame(up);
+  function pixelBlast() {
+    let t = 0, up = true;
+    function step() {
+      if (up) {
+        t += 0.1;
+        pixelTarget = lerp(pixelMin, pixelMax, Math.min(t, 1));
+        if (t >= 1) up = false;
+        requestAnimationFrame(step);
       } else {
-        // Down ramp
-        let downT = 1;
-        const down = () => {
-          if (downT > 0) {
-            downT -= 0.06;
-            pixelTarget = pixelMin + (pixelMax - pixelMin) * Math.max(downT, 0);
-            requestAnimationFrame(down);
-          } else {
-            pixelTarget = pixelMin;
-            pixelBlastActive = false;
-          }
-        };
-        requestAnimationFrame(down);
+        t -= 0.08;
+        pixelTarget = lerp(pixelMin, pixelMax, Math.max(t, 0));
+        if (t > 0) requestAnimationFrame(step);
+        else pixelTarget = pixelMin;
       }
-    };
-    requestAnimationFrame(up);
+    }
+    step();
   }
 
-  // Render one frame into the offscreen scene
-  function renderScene(ctx) {
-    // Clear (use a dark gray/black to avoid banding)
-    ctx.fillStyle = "#0b0b0c";
-    ctx.fillRect(0, 0, W, H);
+  const lerp = (a,b,t)=>a+(b-a)*t;
+  function animate() {
+    // Ease pixel size
+    pixelSize += (pixelTarget - pixelSize) * 0.15;
 
-    // Perspective factor (bigger = more spread)
-    const fov = Math.min(W, H) * 0.85;
-
-    // Slight vignette for mood
-    const grad = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.1, W/2, H/2, Math.hypot(W,H)*0.6);
-    grad.addColorStop(0, "rgba(0,0,0,0)");
-    grad.addColorStop(1, "rgba(0,0,0,0.55)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-
-    // Update & draw each star
-    for (let i = 0; i < stars.length; i++) {
-      const s = stars[i];
-      s.z -= speed;
-      if (s.z <= 0.0001) {
-        // Recycle to the back
-        stars[i] = spawnStar();
-        continue;
-      }
-
-      // Perspective projection
-      const px = (s.x / s.z) * fov + W / 2;
-      const py = (s.y / s.z) * fov + H / 2;
-
-      // If out of bounds, recycle
-      if (px < -50 || px > W + 50 || py < -50 || py > H + 50) {
-        stars[i] = spawnStar();
-        continue;
-      }
-
-      // Size & brightness by depth (nearer = larger/brighter)
-      const t = 1 - (s.z / depth); // 0..1
-      const size = 0.5 + t * 2.2;
-      const alpha = 0.25 + t * 0.85;
-
-      // Draw as tiny square (faster than arcs)
-      ctx.fillStyle = `rgba(240,240,240,${alpha.toFixed(3)})`;
-      ctx.fillRect(px, py, size, size);
-    }
-  }
-
-  function frame() {
-    if (!running) return;
-
-    // Smoothly ease speed toward target
-    speed = ease(speed, targetSpeed, 0.04);
-
-    // Smoothly ease pixelation toward target
-    pixelSize = ease(pixelSize, pixelTarget, 0.15);
-
-    // Render scene at full resolution offscreen
-    renderScene(sCtx);
-
-    // Copy to display with optional pixelation
-    // Disable smoothing for crisp nearest-neighbor
-    dCtx.imageSmoothingEnabled = false;
-
-    if (pixelSize <= 1.01) {
-      // No pixelation, draw 1:1
-      dCtx.drawImage(scene, 0, 0);
-    } else {
-      const w = Math.max(1, Math.floor(W / pixelSize));
-      const h = Math.max(1, Math.floor(H / pixelSize));
-      // Downsample into display at reduced resolution, then scale up to fill
-      dCtx.clearRect(0, 0, W, H);
-      dCtx.drawImage(scene, 0, 0, W, H, 0, 0, w, h);     // draw full scene into smaller area
-      dCtx.drawImage(display, 0, 0, w, h, 0, 0, W, H);   // scale it back up (nearest-neighbor)
-    }
-
-    requestAnimationFrame(frame);
+    updateProgress();
+    updateParallax();
+    requestAnimationFrame(animate);
   }
 
   // Interactions
-  window.addEventListener("resize", resize);
-
-  // Scroll adjusts target speed
-  window.addEventListener("wheel", (e) => {
-    // Normalize direction
-    const delta = Math.sign(e.deltaY);
-    const step = 0.01;
-    const next = targetSpeed + (delta > 0 ? step : -step);
-    targetSpeed = clamp(next, 0.002, 0.35);
-  }, { passive: true });
-
-  // Hold mouse for boost
-  window.addEventListener("pointerdown", () => {
-    boosting = true;
-    targetSpeed = Math.max(targetSpeed, boostSpeed);
-    animatePixelBlast(); // also trigger a blast on press
-  });
-  window.addEventListener("pointerup", () => {
-    boosting = false;
-    targetSpeed = Math.max(baseSpeed, targetSpeed * 0.5);
-  });
-
-  // Keyboard: toggle steady pixelation mode with "P"
+  window.addEventListener("scroll", () => { updateProgress(); updateParallax(); }, { passive: true });
+  window.addEventListener("resize", () => { resize(); updateProgress(); updateParallax(); });
+  // Click anywhere on the hero to pulse
+  secIntro.addEventListener("pointerdown", () => pixelBlast());
+  // Toggle steady pixels
   window.addEventListener("keydown", (e) => {
     if (e.key.toLowerCase() === "p") {
-      if (pixelTarget === pixelMin) {
-        pixelTarget = 10; // medium chunky
-      } else {
-        pixelTarget = pixelMin;
-      }
+      pixelTarget = (pixelTarget === pixelMin) ? 10 : pixelMin;
     }
   });
 
-  // Utils
-  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-
-  // Kickoff
+  // Init
   resize();
-  frame();
+  updateProgress();
+  updateParallax();
+  drawFx();
+  animate();
 })();

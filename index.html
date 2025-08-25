@@ -3,28 +3,111 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Zoom Tunnel + Pixelation</title>
+  <title>Sam Goldman — Portfolio</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Display canvas (shown on screen). We render the scene to an offscreen canvas,
-       then scale it into this one to get true pixelation without blur. -->
-  <canvas id="stage"></canvas>
+  <!-- Left rail -->
+  <aside class="rail">
+    <div class="brand">Sam Goldman</div>
+    <nav class="chapters">
+      <a href="#intro">Intro</a>
+      <a href="#work">Work</a>
+      <a href="#about">About</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <div class="note">Scroll to explore • Click background for a pixel pulse • P toggles steady pixels</div>
+  </aside>
 
-  <!-- Minimal HUD -->
-  <div class="hud">
-    <div class="brand">Your Name</div>
-    <div class="instructions">
-      Scroll = speed • Hold click = boost • Click = pixelation blast • Press P = toggle pixelation mode
-    </div>
-  </div>
+  <!-- Main content -->
+  <main>
+    <!-- HERO / INTRO -->
+    <section id="intro" class="chapter" data-title="Intro">
+      <div class="progress" aria-hidden="true">You’ve discovered 0% of this chapter</div>
 
-  <!-- Optional anchors you can wire up later -->
-  <nav class="nav">
-    <a href="#work">Work</a>
-    <a href="#about">About</a>
-    <a href="#contact">Contact</a>
-  </nav>
+      <!-- Parallax background & FX canvas -->
+      <div class="bg parallax" data-speed="0.2" style="--img:url('assets/hero.jpg')"></div>
+      <canvas id="fx"></canvas>
+
+      <div class="wrap">
+        <h1 class="reveal">Presence-first interactive work</h1>
+        <p class="reveal delay-1">
+          I design & code sites with cinematic motion, clean typography, and precise interactions.
+        </p>
+      </div>
+    </section>
+
+    <!-- WORK -->
+    <section id="work" class="chapter" data-title="Work">
+      <div class="progress" aria-hidden="true">You’ve discovered 0% of this chapter</div>
+      <div class="bg parallax" data-speed="0.15" style="--img:url('assets/work.jpg')"></div>
+
+      <div class="wrap">
+        <h2 class="reveal">Selected Work</h2>
+        <div class="grid">
+          <!-- Replace thumbs with your images -->
+          <a class="card reveal" href="#" aria-label="Project 1">
+            <img src="assets/thumb1.jpg" alt="Project 1"/>
+            <div class="meta">
+              <h3>Garden Narrative</h3><p>Story scrollytelling + audio</p>
+            </div>
+          </a>
+          <a class="card reveal delay-1" href="#" aria-label="Project 2">
+            <img src="assets/thumb2.jpg" alt="Project 2"/>
+            <div class="meta">
+              <h3>Pixel Zoom</h3><p>Canvas particle tunnel</p>
+            </div>
+          </a>
+          <a class="card reveal delay-2" href="#" aria-label="Project 3">
+            <img src="assets/thumb3.jpg" alt="Project 3"/>
+            <div class="meta">
+              <h3>Chaptered Archive</h3><p>Chapter UI + progress</p>
+            </div>
+          </a>
+          <a class="card reveal delay-3" href="#" aria-label="Project 4">
+            <img src="assets/thumb4.jpg" alt="Project 4"/>
+            <div class="meta">
+              <h3>Audio Salon</h3><p>Curated playlist UX</p>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section id="about" class="chapter" data-title="About">
+      <div class="progress" aria-hidden="true">You’ve discovered 0% of this chapter</div>
+      <div class="bg parallax" data-speed="0.1" style="--img:url('assets/about.jpg')"></div>
+
+      <div class="wrap">
+        <h2 class="reveal">About</h2>
+        <p class="reveal delay-1">
+          NYC-based creative building presence-first digital experiences and community tools.
+          I like ACES-ish grading, slow camera motion, and honest materials (rough, matte).
+        </p>
+
+        <!-- Optional: minimalist “salon” player -->
+        <div class="player reveal delay-2">
+          <button id="playBtn" aria-label="Play/Pause">Play</button>
+          <div class="track">Demo track — Atmos bed</div>
+          <audio id="audio" src="assets/demo.mp3" preload="none"></audio>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="contact" class="chapter" data-title="Contact">
+      <div class="progress" aria-hidden="true">You’ve discovered 0% of this chapter</div>
+      <div class="bg parallax" data-speed="0.08" style="--img:url('assets/contact.jpg')"></div>
+
+      <div class="wrap">
+        <h2 class="reveal">Contact</h2>
+        <p class="reveal delay-1">
+          <a href="mailto:you@domain.com">you@domain.com</a> · IG <a href="#" target="_blank">@yourhandle</a>
+        </p>
+      </div>
+    </section>
+  </main>
 
   <script src="script.js"></script>
 </body>
