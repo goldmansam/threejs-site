@@ -14,7 +14,6 @@
   :root{
     --rail-w: 210px;
     --neon: #00ff88;
-    --neon-soft: rgba(0,255,160,.14);
   }
   html,body{height:100%;margin:0;background:#07080c;overflow:hidden}
   canvas{display:block}
@@ -40,32 +39,30 @@
   .vnav button:hover{border-color:rgba(255,255,255,.28); background:rgba(28,30,36,.58)}
   .vnav button.active{color:#9ff; border-color:rgba(160,240,255,.55)}
 
-  /* Arrow controls (bottom-right) */
-  .arrows{
-    position:fixed; right:20px; bottom:20px; z-index:30; display:flex; gap:10px
+  /* Arrow controls + Audio (bottom-right) */
+  .hud{
+    position:fixed; right:20px; bottom:20px; z-index:30; display:flex; gap:10px; align-items:center
   }
-  .arrow{
+  .arrow, .audioBtn{
     width:46px; height:46px; border-radius:999px; border:1px solid rgba(255,255,255,.2);
     background:radial-gradient(120% 120% at 30% 30%, rgba(255,255,255,.25), rgba(30,32,40,.5));
-    box-shadow:0 0 18px rgba(160,240,255,.25), inset 0 0 18px rgba(160,240,255,.15);
+    box-shadow:0 0 18px rgba(0,255,160,.25), inset 0 0 18px rgba(0,255,160,.15);
     color:#e8eef8; display:grid; place-items:center; cursor:pointer; user-select:none;
     font-family:'Orbitron',sans-serif
   }
-  .arrow:hover{box-shadow:0 0 22px rgba(160,240,255,.35), inset 0 0 22px rgba(160,240,255,.2)}
+  .arrow:hover,.audioBtn:hover{box-shadow:0 0 22px rgba(0,255,160,.35), inset 0 0 22px rgba(0,255,160,.2)}
   .arrow span{font-size:18px; transform:translateY(-1px)}
+  .audioBtn{width:auto; padding:0 12px; font-size:12px; letter-spacing:.06em}
 
-  /* Neon green overlay (animated gradient, digital vibe) */
+  /* Neon green overlay (animated) */
   .overlay{
     position:fixed; inset:0; z-index:40; display:none; place-items:center;
-    backdrop-filter: saturate(120%) brightness(1.05);
     pointer-events:auto;
   }
   .overlay.show{display:grid}
-  /* Animated multi-layer background */
   .overlay::before, .overlay::after{
     content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:screen;
   }
-  /* flowing green haze + vertical drift lines */
   .overlay::before{
     background:
       radial-gradient(800px 800px at 20% 30%, rgba(0,255,150,.12), rgba(0,0,0,0) 60%),
@@ -86,8 +83,8 @@
   .panel{
     position:relative; z-index:41; width:min(900px, calc(100vw - var(--rail-w) - 80px));
     border:1px solid rgba(0,255,160,.35);
-    background: linear-gradient(180deg, rgba(0,20,12,.75), rgba(0,8,6,.75));
-    box-shadow: 0 0 32px rgba(0,255,160,.15), inset 0 0 24px rgba(0,255,160,.12);
+    background: linear-gradient(180deg, rgba(0,20,12,.78), rgba(0,8,6,.78));
+    box-shadow: 0 0 32px rgba(0,255,160,.18), inset 0 0 24px rgba(0,255,160,.12);
     border-radius:16px; padding:22px; color:#ccffe8; font:14px/1.6 'Orbitron',sans-serif; letter-spacing:.03em
   }
   .panel h2{ margin:0 0 10px 0; font-weight:900; letter-spacing:.08em; text-transform:uppercase }
@@ -97,6 +94,7 @@
     box-shadow:0 0 14px rgba(0,255,160,.2), inset 0 0 10px rgba(0,255,160,.1);
     font-family:'Orbitron',sans-serif; letter-spacing:.06em
   }
+
   @media(max-width:920px){ :root{ --rail-w: 170px; } .rail{ width:var(--rail-w);} }
 </style>
 </head>
@@ -112,19 +110,20 @@
     </div>
   </aside>
 
-  <!-- Arrows -->
-  <div class="arrows">
+  <!-- Arrows + Audio -->
+  <div class="hud">
     <div class="arrow" id="prev"><span>◀</span></div>
     <div class="arrow" id="next"><span>▶</span></div>
+    <button id="audioBtn" class="audioBtn">AUDIO: OFF</button>
   </div>
 
-  <!-- Neon overlay (click-through content) -->
+  <!-- Neon overlay (click cloud/title to open) -->
   <div id="overlay" class="overlay">
     <div class="panel">
       <button class="close" id="close">Close</button>
       <h2 id="ov-title">Section</h2>
       <div id="ov-body">
-        <p>Put your content here. I set this up as a modal overlay with a neon-green animated gradient. You can later load real Work/About/Contact content.</p>
+        <p>Put your content here. This neon-green overlay sits above the galaxy scene with an animated gradient vibe.</p>
       </div>
     </div>
   </div>
@@ -135,55 +134,53 @@ import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
 /* ================= Config ================= */
 const CONFIG = {
   // Particles
-  AMBIENT_COUNT: 14000,     // loose 3D cloud (interactive)
-  SWARM_COUNT:    8000,     // orbiting ring near title
-  SHAPE_COUNT:   16000,     // dense filled titles
-  BOX: 150,
+  AMBIENT_COUNT: 18000,     // loose 3D cloud (mouse-reactive)
+  SWARM_COUNT:   10000,     // orbiting ring near title
+  SHAPE_COUNT:   18000,     // dense filled titles
+  BOX: 160,
   BASE_SPEED: 0.03,
   DAMPING: 0.985,
 
   // Camera / Orbit
   CAMERA_FOV: 60,
-  ORBIT_RADIUS: 155,
+  ORBIT_RADIUS: 165,
   ORBIT_DAMP: 0.12,
   ORBIT_SENS: { theta: 0.008, phi: 0.006 }, // drag sensitivity
-  PHI_MIN: 0.2, PHI_MAX: Math.PI - 0.2,     // avoid gimbal at poles
+  PHI_MIN: 0.25, PHI_MAX: Math.PI - 0.25,
 
-  // Sections (titles)
+  // Sections
   SECTIONS: ["Samuel Goldman","Work","About","Contact"],
 
-  // Title sampling
-  CANVAS_W: 2200,           // higher res = smoother fill
-  STEP: 3,                  // sampling step (lower = denser)
+  // Title sampling (FILLED)
+  CANVAS_W: 2400,
+  STEP: 3,                  // smaller = denser
   THICKNESS: 5,             // +/-Z jitter
-  OUTLINE_ONLY: false,      // FILLED
+  OUTLINE_ONLY: false,
 
-  // Morph (single, decisive pull)
-  ATTRACT: 0.018,
-  MORPH_RATE: 0.022,
+  // Morph (single decisive pull)
+  ATTRACT: 0.02,
+  MORPH_RATE: 0.028,
 
   // Dots
   DOT_SIZE: 0.62,
-  DOT_OPACITY: 0.96,
+  DOT_OPACITY: 0.98,
 
-  // Mouse field
-  FIELD_RADIUS: 14,
-  FIELD_FORCE: 0.22
+  // Mouse field (ambient reacts)
+  FIELD_RADIUS: 16,
+  FIELD_FORCE: 0.26
 };
 
 const SECT = { START:0, WORK:1, ABOUT:2, CONTACT:3 };
 
 /* ================= Scene ================= */
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x06070b, 0.006);
+scene.fog = new THREE.FogExp2(0x061008, 0.006);
 
-const camera = new THREE.PerspectiveCamera(CONFIG.CAMERA_FOV, innerWidth/innerHeight, 0.1, 5000);
+const camera = new THREE.PerspectiveCamera(CONFIG.CAMERA_FOV, innerWidth/innerHeight, 0.1, 6000);
 
-// Pivot group: we orbit the camera around this
+// Orbit: camera rides around a pivot
 const pivot = new THREE.Object3D();
 scene.add(pivot);
-
-// Camera child at orbit radius; we rotate pivot to orbit 360°
 const camHolder = new THREE.Object3D();
 camHolder.position.set(0,0,CONFIG.ORBIT_RADIUS);
 pivot.add(camHolder);
@@ -195,10 +192,10 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setClearColor(0x07080c, 1);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
-scene.add(new THREE.AmbientLight(0x334455, 0.68));
+scene.add(new THREE.AmbientLight(0x224433, 0.8));
 
 /* ============ Nebula background (never black) ============ */
-const nebulaUniforms = { uTime:{value:0}, uIntensity:{value:0.92}, uHueShift:{value:0.0} };
+const nebulaUniforms = { uTime:{value:0}, uIntensity:{value:1.0}, uHueShift:{value:0.0} };
 const nebulaMat = new THREE.ShaderMaterial({
   side: THREE.BackSide, uniforms: nebulaUniforms,
   vertexShader: `varying vec3 vPos; void main(){ vPos=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);} `,
@@ -207,7 +204,7 @@ const nebulaMat = new THREE.ShaderMaterial({
     float n(vec3 p){ return sin(p.x)*sin(p.y)*sin(p.z); }
     float fbm(vec3 p){ float f=0.0,a=0.5; for(int i=0;i<6;i++){ f+=a*n(p); p*=2.03; p+=vec3(.1,.27,-.19); a*=.55; } return f; }
     vec3 pal(float t){
-      vec3 a=vec3(.35,.7,.9), b=vec3(.9,.35,.75), c=vec3(.85,.75,.3);
+      vec3 a=vec3(.20,1.0,.60), b=vec3(.10,.95,.50), c=vec3(.25,.9,.75); // greenish hues
       float k1=.5+.5*sin(6.2831*(t+uHueShift)), k2=.5+.5*sin(6.2831*(t*1.3+.23+uHueShift));
       return mix(mix(a,b,k1), c, k2);
     }
@@ -215,12 +212,12 @@ const nebulaMat = new THREE.ShaderMaterial({
       vec3 p = normalize(vPos)*2.0 + vec3(0.,0.,uTime*0.03);
       float d = fbm(p*2.0 + uTime*0.05);
       float m = smoothstep(-.6,.9,d);
-      vec3 col = mix(vec3(.04,.05,.07), pal(m), uIntensity*(.35+.65*m));
+      vec3 col = mix(vec3(.02,.06,.03), pal(m), uIntensity*(.35+.65*m));
       gl_FragColor = vec4(col, 1.0);
     }`
 });
-const nebula = new THREE.Mesh(new THREE.SphereGeometry(2200,64,64), nebulaMat);
-pivot.add(nebula); // attached to pivot so it's always around you
+const nebula = new THREE.Mesh(new THREE.SphereGeometry(2600,64,64), nebulaMat);
+pivot.add(nebula);
 
 /* ============ Round dot texture ============ */
 function makeDotTexture(size=64){
@@ -234,31 +231,30 @@ function makeDotTexture(size=64){
 }
 const dotTex = makeDotTexture();
 
-/* ============ Palettes ============ */
-const PALETTE = [
-  [0.30,0.85,0.90],[0.90,0.35,0.85],[0.85,0.75,0.30],
-  [0.40,0.95,0.85],[0.95,0.40,0.70],[0.75,0.85,0.35]
+/* ============ Neon-green palette ============ */
+const GREENS = [
+  [0.18,1.00,0.60],[0.22,1.00,0.66],[0.14,0.95,0.55],[0.26,0.95,0.72],[0.20,0.90,0.68]
 ];
 const rnd=(a,b)=>a+Math.random()*(b-a);
 
-/* ============ Ambient cloud (loose, mouse-interactive) ============ */
+/* ============ Ambient cloud (mouse-reactive) ============ */
 const ambCount=CONFIG.AMBIENT_COUNT;
 const ambPos=new Float32Array(ambCount*3), ambVel=new Float32Array(ambCount*3), ambCol=new Float32Array(ambCount*3);
 for(let i=0;i<ambCount;i++){
   const i3=i*3;
   ambPos[i3+0]=rnd(-CONFIG.BOX,CONFIG.BOX);
   ambPos[i3+1]=rnd(-CONFIG.BOX,CONFIG.BOX);
-  ambPos[i3+2]=rnd(-300,300); // spans deep so contact never black
+  ambPos[i3+2]=rnd(-360,360);
   ambVel[i3+0]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   ambVel[i3+1]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   ambVel[i3+2]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
-  const c=PALETTE[(Math.random()*PALETTE.length)|0]; ambCol[i3+0]=c[0]; ambCol[i3+1]=c[1]; ambCol[i3+2]=c[2];
+  const c=GREENS[(Math.random()*GREENS.length)|0]; ambCol[i3+0]=c[0]; ambCol[i3+1]=c[1]; ambCol[i3+2]=c[2];
 }
 const ambGeom=new THREE.BufferGeometry();
 ambGeom.setAttribute("position", new THREE.BufferAttribute(ambPos,3));
 ambGeom.setAttribute("color",    new THREE.BufferAttribute(ambCol,3));
 const ambMat=new THREE.PointsMaterial({
-  size:CONFIG.DOT_SIZE*0.6,map:dotTex,alphaTest:0.02,vertexColors:true,transparent:true,opacity:0.72,depthWrite:false,blending:THREE.AdditiveBlending
+  size:CONFIG.DOT_SIZE*0.58,map:dotTex,alphaTest:0.02,vertexColors:true,transparent:true,opacity:0.72,depthWrite:false,blending:THREE.AdditiveBlending
 });
 const ambientPoints=new THREE.Points(ambGeom,ambMat); scene.add(ambientPoints);
 
@@ -268,19 +264,16 @@ const swarmPos=new Float32Array(swarmCount*3), swarmCol=new Float32Array(swarmCo
 const swarmTheta=new Float32Array(swarmCount), swarmRad=new Float32Array(swarmCount), swarmSpeed=new Float32Array(swarmCount), swarmYOff=new Float32Array(swarmCount);
 for(let i=0;i<swarmCount;i++){
   const i3=i*3;
-  const r = rnd(20, 60);                // ring radius
-  const th = rnd(0, Math.PI*2);
-  const sp = rnd(0.06, 0.18);
-  const yoff = rnd(-12, 12);
+  const r = rnd(22, 64), th = rnd(0, Math.PI*2), sp = rnd(0.06, 0.18), yoff = rnd(-12, 12);
   swarmRad[i]=r; swarmTheta[i]=th; swarmSpeed[i]=sp; swarmYOff[i]=yoff;
   swarmPos[i3+0]=Math.cos(th)*r; swarmPos[i3+1]=yoff; swarmPos[i3+2]=Math.sin(th)*r;
-  const c=PALETTE[(Math.random()*PALETTE.length)|0]; swarmCol[i3+0]=c[0]; swarmCol[i3+1]=c[1]; swarmCol[i3+2]=c[2];
+  const c=GREENS[(Math.random()*GREENS.length)|0]; swarmCol[i3+0]=c[0]; swarmCol[i3+1]=c[1]; swarmCol[i3+2]=c[2];
 }
 const swarmGeom=new THREE.BufferGeometry();
 swarmGeom.setAttribute("position", new THREE.BufferAttribute(swarmPos,3));
 swarmGeom.setAttribute("color",    new THREE.BufferAttribute(swarmCol,3));
 const swarmMat=new THREE.PointsMaterial({
-  size:CONFIG.DOT_SIZE*0.5,map:dotTex,alphaTest:0.02,vertexColors:true,transparent:true,opacity:0.82,depthWrite:false,blending:THREE.AdditiveBlending
+  size:CONFIG.DOT_SIZE*0.5,map:dotTex,alphaTest:0.02,vertexColors:true,transparent:true,opacity:0.85,depthWrite:false,blending:THREE.AdditiveBlending
 });
 const swarmPoints=new THREE.Points(swarmGeom,swarmMat); scene.add(swarmPoints);
 
@@ -295,7 +288,7 @@ for(let i=0;i<shapeCount;i++){
   vel[i3+0]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   vel[i3+1]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   vel[i3+2]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
-  const c=PALETTE[(Math.random()*PALETTE.length)|0]; col[i3+0]=c[0]; col[i3+1]=c[1]; col[i3+2]=c[2];
+  const c=GREENS[(Math.random()*GREENS.length)|0]; col[i3+0]=c[0]; col[i3+1]=c[1]; col[i3+2]=c[2];
 }
 const shapeGeom=new THREE.BufferGeometry();
 shapeGeom.setAttribute("position", new THREE.BufferAttribute(pos,3));
@@ -304,28 +297,27 @@ const shapeMat=new THREE.PointsMaterial({
   size:CONFIG.DOT_SIZE,map:dotTex,alphaTest:0.02,vertexColors:true,transparent:true,opacity:CONFIG.DOT_OPACITY,depthWrite:false,blending:THREE.AdditiveBlending
 });
 const shapePoints=new THREE.Points(shapeGeom,shapeMat); scene.add(shapePoints);
-shapeGeom.computeBoundingSphere(); // helpful for raycasting
+shapeGeom.computeBoundingSphere();
 
 const targets=new Float32Array(shapeCount*3);
 const morphState={progress:1};
 
-/* ====== Text sampling with Orbitron (never cut off) ====== */
+/* ====== Text sampling with Orbitron (FILLED) & never-cutoff sizing ====== */
 function worldUnitsPerPixel(){
   const fovRad = THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV);
   const visibleW = 2 * CONFIG.ORBIT_RADIUS * Math.tan(fovRad/2) * (innerWidth/innerHeight);
   return visibleW / innerWidth;
 }
-function layoutParams(){
-  const railPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rail-w')) || 210;
+function safeWidthCentered(){
+  // Keep centered on screen; ensure left rail never overlaps: subtract *two* rail widths to be safe at all orbits.
   const pxToWorld = worldUnitsPerPixel();
+  const railPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rail-w')) || 210;
   const railUnits = railPx * pxToWorld;
   const fovRad = THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV);
   const visibleW = 2 * CONFIG.ORBIT_RADIUS * Math.tan(fovRad/2) * (innerWidth/innerHeight);
-  const safeW = Math.max(30, (visibleW - railUnits) * 0.78); // never tiny; generous margin
-  const centerX = railUnits * 0.55; // nudge right of rail
-  return { safeW, centerX };
+  // Use only a portion of the center area so text never hits edges or rail:
+  return Math.max(28, (visibleW - 2*railUnits) * 0.85);
 }
-
 function sampleTextNormalized(text){
   const W=CONFIG.CANVAS_W, H=Math.round(W*0.22);
   const cnv=document.createElement("canvas"); cnv.width=W; cnv.height=H;
@@ -339,18 +331,24 @@ function sampleTextNormalized(text){
 
   const pts=[]; const step=CONFIG.STEP;
   const aAt=(x,y)=>img[(y*W+x)*4+3];
+  let xmin=1e9, xmax=-1e9;
   for(let y=step;y<H-step;y+=step){
     for(let x=step;x<W-step;x+=step){
-      if(aAt(x,y)>128){ pts.push([x,y]); } // FILLED (not outline)
+      if(aAt(x,y)>128){
+        pts.push([x,y]);
+        if(x<xmin) xmin=x; if(x>xmax) xmax=x;
+      }
     }
   }
-  return pts.map(([x,y])=>[(x-W/2)/W, (H/2-y)/W]); // normalized by W
+  // Normalize by width; also keep extents to fit exactly
+  const cx = (xmin + xmax) / 2;
+  const widthNorm = (xmax - xmin) / W;         // in "normalized-by-width" units
+  const normPts = pts.map(([x,y])=>[(x - cx)/W, (H/2 - y)/W, widthNorm]);
+  return normPts; // each point carries computed widthNorm in [2]
 }
-
 const NORM_POINTS = {};
 let section = SECT.START;
 
-/* Ensure Orbitron is loaded before sampling */
 async function prepareText(){
   try{ await document.fonts.load('900 120px "Orbitron"'); await document.fonts.ready; }catch(e){}
   NORM_POINTS[SECT.START]   = sampleTextNormalized("Samuel Goldman");
@@ -360,25 +358,22 @@ async function prepareText(){
   assignTargetsFor(section); // initial
 }
 
-/* Map normalized points to world; move pivot to centerX so rail never overlaps */
 function assignTargetsFor(sectionIndex){
-  const pts = NORM_POINTS[sectionIndex]; if(!pts) return;
-  const { safeW, centerX } = layoutParams();
-
-  // move the whole stage so words sit safely to the right of the rail
-  pivot.position.x = centerX;
-
+  const pts = NORM_POINTS[sectionIndex]; if(!pts || pts.length===0) return;
+  const desiredW = safeWidthCentered();               // safe world width in view center
+  const widthNorm = pts[0][2] || 1;                   // same for all points
+  const scale = desiredW / Math.max(0.0001, widthNorm);
   for(let i=0;i<shapeCount;i++){
     const t = pts[(Math.random()*pts.length)|0];
     const j=i*3;
-    targets[j+0] = t[0] * safeW;     // pivot handles the center offset
-    targets[j+1] = t[1] * safeW;
+    targets[j+0] = t[0] * scale;                      // centered on screen
+    targets[j+1] = t[1] * scale;
     targets[j+2] = THREE.MathUtils.randFloatSpread(CONFIG.THICKNESS*2);
   }
   morphState.progress = 0; // start fresh pull
 }
 
-/* Swarm ring follows pivot (title center) */
+/* ============ Swarm follows the title center (origin) ============ */
 function updateSwarm(){
   for(let i=0;i<swarmCount;i++){
     const j=i*3;
@@ -391,29 +386,26 @@ function updateSwarm(){
   swarmGeom.attributes.position.needsUpdate = true;
 }
 
-/* ================= Orbit controls (drag to rotate fully around) ================= */
-let theta = 0, phi = Math.PI/2;      // spherical angles
-let tTheta = 0, tPhi = Math.PI/2;    // targets for easing
+/* ================= Orbit controls (drag 360°) ================= */
+let theta = 0, phi = Math.PI/2;
+let tTheta = 0, tPhi = Math.PI/2;
 let dragging = false, moved = false, lastX=0, lastY=0;
 
 function updateCamera(){
-  // ease to target
   theta += (tTheta - theta) * CONFIG.ORBIT_DAMP;
-  phi   += (tPhi   - tPhi) * 0 + (tPhi - phi) * CONFIG.ORBIT_DAMP; // avoid typo; keep phi easing
-  phi   += (tPhi - phi) * CONFIG.ORBIT_DAMP;
-
+  phi   += (tPhi   - phi)   * CONFIG.ORBIT_DAMP;
   const r = CONFIG.ORBIT_RADIUS;
   const x = r * Math.sin(phi) * Math.sin(theta);
   const y = r * Math.cos(phi);
   const z = r * Math.sin(phi) * Math.cos(theta);
-
   camHolder.position.set(x,y,z);
   camera.lookAt(pivot.position);
 }
 
 addEventListener("pointerdown", (e)=>{
-  if (e.target.closest('.rail') || e.target.closest('.arrows') || e.target.closest('.panel')) return;
+  if (e.target.closest('.rail') || e.target.closest('.hud') || e.target.closest('.panel')) return;
   dragging = true; moved = false; lastX=e.clientX; lastY=e.clientY;
+  maybeStartAudio(); // start audio on first user gesture
 });
 addEventListener("pointermove", (e)=>{
   if(!dragging) return;
@@ -424,31 +416,26 @@ addEventListener("pointermove", (e)=>{
   tPhi = THREE.MathUtils.clamp(tPhi, CONFIG.PHI_MIN, CONFIG.PHI_MAX);
   lastX=e.clientX; lastY=e.clientY;
 });
-addEventListener("pointerup", (e)=>{
-  if(!dragging){ return; }
+addEventListener("pointerup", ()=>{
+  if(!dragging) return;
   dragging = false;
-  // if it was a click (not a drag), open the section overlay (clicking the cloud/title)
-  if(!moved){
-    openOverlay(section);
-  }
+  if(!moved){ openOverlay(section); }
 });
 
-/* Disable wheel scroll entirely (fully structured) */
+/* Disable wheel (structured) */
 addEventListener("wheel", e=>e.preventDefault(), { passive:false });
 
 /* ================= Mouse interaction field (ambient reacts) ================= */
 const raycaster = new THREE.Raycaster();
 let mouseNDC = new THREE.Vector2();
-let fieldPos = new THREE.Vector3(0,0,0); // point in space near pivot
+let fieldPos = new THREE.Vector3(0,0,0);
 
 addEventListener("pointermove", (e)=>{
   const rect = renderer.domElement.getBoundingClientRect();
   mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
   mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 });
-
 function updateMouseField(){
-  // Intersect a plane through pivot, facing the camera
   const plane = new THREE.Plane();
   const camDir = new THREE.Vector3();
   camera.getWorldDirection(camDir);
@@ -477,14 +464,13 @@ addEventListener("keydown", (e)=>{ if(e.key==="ArrowRight") next(); if(e.key==="
 const overlay = document.getElementById('overlay');
 const ovTitle = document.getElementById('ov-title');
 document.getElementById('close').addEventListener('click', ()=> overlay.classList.remove('show'));
-
 function openOverlay(sec){
   const titles=["Samuel Goldman","Work","About","Contact"];
   ovTitle.textContent = titles[sec];
   overlay.classList.add('show');
 }
 
-/* ================= Resize safety: recompute targets so text never clips ================= */
+/* ================= Resize: recompute targets so text never clips ================= */
 addEventListener("resize", ()=>{
   camera.aspect = innerWidth/innerHeight;
   camera.updateProjectionMatrix();
@@ -506,19 +492,17 @@ function animate(){
   updateCamera();
   updateMouseField();
 
-  // Ambient: wander + mouse force + wrap
+  // Ambient: wander + mouse field + wrap
   const r2 = CONFIG.FIELD_RADIUS * CONFIG.FIELD_RADIUS;
   for(let i=0;i<ambCount;i++){
     const j=i*3;
-    // mild wander + damping
     ambVel[j+0]=ambVel[j+0]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
     ambVel[j+1]=ambVel[j+1]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
     ambVel[j+2]=ambVel[j+2]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
 
-    // mouse field (repulsive swirl)
-    const dx=ambPos[j+0]- (fieldPos.x - pivot.position.x);
-    const dy=ambPos[j+1]- (fieldPos.y - pivot.position.y);
-    const dz=ambPos[j+2]- (fieldPos.z - pivot.position.z);
+    const dx=ambPos[j+0]- (fieldPos.x);
+    const dy=ambPos[j+1]- (fieldPos.y);
+    const dz=ambPos[j+2]- (fieldPos.z);
     const d2 = dx*dx+dy*dy+dz*dz;
     if (d2<r2){
       const f=(1 - d2/r2) * CONFIG.FIELD_FORCE;
@@ -531,20 +515,27 @@ function animate(){
     ambPos[j+1]+=ambVel[j+1];
     ambPos[j+2]+=ambVel[j+2];
 
-    const B=CONFIG.BOX, Zmin=-350, Zmax=350;
+    const B=CONFIG.BOX, Zmin=-380, Zmax=380;
     if(ambPos[j+0]<-B) ambPos[j+0]+=2*B; else if(ambPos[j+0]>B) ambPos[j+0]-=2*B;
     if(ambPos[j+1]<-B) ambPos[j+1]+=2*B; else if(ambPos[j+1]>B) ambPos[j+1]-=2*B;
     if(ambPos[j+2]<Zmin) ambPos[j+2]=Zmax; else if(ambPos[j+2]>Zmax) ambPos[j+2]=Zmin;
   }
   ambPosAttr.needsUpdate = true;
 
-  // Swarm orbits title
-  updateSwarm(); swarmPosAttr.needsUpdate = true;
+  // Swarm ring
+  for(let i=0;i<swarmCount;i++){
+    const j=i*3;
+    swarmTheta[i] += swarmSpeed[i]*0.01;
+    const r = swarmRad[i]*(1.0+0.06*Math.sin(swarmTheta[i]*1.7+i*0.13));
+    swarmPos[j+0] = Math.cos(swarmTheta[i]) * r;
+    swarmPos[j+1] = swarmYOff[i] * (1.0 + 0.25*Math.sin(swarmTheta[i]*0.7 + i*0.09));
+    swarmPos[j+2] = Math.sin(swarmTheta[i]) * r * 0.7;
+  }
+  swarmPosAttr.needsUpdate = true;
 
-  // Morph (single pull) then hold
-  if(morphState.progress < 1){ morphState.progress = Math.min(1, morphState.progress + CONFIG.MORPH_RATE); }
+  // Morph once, then hold crisp
+  if(morphState.progress < 1) morphState.progress = Math.min(1, morphState.progress + CONFIG.MORPH_RATE);
 
-  // Title particles: pull to targets, then settle
   for(let i=0;i<shapeCount;i++){
     const j=i*3, m=morphState.progress;
     vel[j+0] = vel[j+0]*CONFIG.DAMPING + (targets[j+0]-pos[j+0]) * CONFIG.ATTRACT * m;
@@ -561,6 +552,82 @@ animate();
 
 /* Build text once fonts are ready */
 prepareText();
+
+/* ================= Web Audio: alien ambient ================= */
+let audioCtx=null, master=null, noiseSrc=null, noiseGain=null, bp=null, lfo=null, lfoGain=null, dc=null, tri=null, triGain=null, mix=null, delay=null, fb=null;
+let audioOn=false;
+
+function initAudio(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  master = audioCtx.createGain(); master.gain.value = 0; master.connect(audioCtx.destination);
+
+  // Noise path → bandpass with sweeping LFO → delay
+  noiseSrc = audioCtx.createBufferSource();
+  const len = audioCtx.sampleRate * 2;
+  const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for(let i=0;i<len;i++) data[i] = (Math.random()*2 - 1)*0.7; // white noise
+  noiseSrc.buffer = buf; noiseSrc.loop = true;
+
+  bp = audioCtx.createBiquadFilter(); bp.type="bandpass"; bp.Q.value = 7;
+  lfo = audioCtx.createOscillator(); lfo.type="sine"; lfo.frequency.value = 0.08;
+  lfoGain = audioCtx.createGain(); lfoGain.gain.value = 500; // sweep depth in Hz
+  dc = audioCtx.createConstantSource(); dc.offset.value = 600; // base center frequency
+  lfo.connect(lfoGain).connect(bp.frequency);
+  dc.connect(bp.frequency);
+  lfo.start(); dc.start();
+
+  noiseGain = audioCtx.createGain(); noiseGain.gain.value = 0.18;
+
+  // Triangle synth with slow FM for alien tone
+  const mod = audioCtx.createOscillator(); mod.frequency.value = 0.2;
+  const modGain = audioCtx.createGain(); modGain.gain.value = 30; // Hz deviation
+  tri = audioCtx.createOscillator(); tri.type="triangle"; tri.frequency.value = 110;
+  mod.connect(modGain).connect(tri.frequency);
+  mod.start(); tri.start();
+  triGain = audioCtx.createGain(); triGain.gain.value = 0.06;
+
+  // Echo
+  delay = audioCtx.createDelay(5.0); delay.delayTime.value = 0.28;
+  fb = audioCtx.createGain(); fb.gain.value = 0.35;
+
+  // Mix
+  mix = audioCtx.createGain(); mix.gain.value = 1.0;
+
+  noiseSrc.connect(bp).connect(noiseGain).connect(mix);
+  tri.connect(triGain).connect(mix);
+  mix.connect(delay).connect(fb).connect(delay);
+  mix.connect(master); delay.connect(master);
+
+  noiseSrc.start();
+}
+
+function startAudio(){
+  if(!audioCtx) initAudio();
+  audioCtx.resume();
+  master.gain.cancelScheduledValues(audioCtx.currentTime);
+  master.gain.linearRampToValueAtTime(0.0, audioCtx.currentTime);
+  master.gain.linearRampToValueAtTime(0.6, audioCtx.currentTime + 1.2);
+  audioOn = true; updateAudioBtn();
+}
+function stopAudio(){
+  if(!audioCtx) return;
+  master.gain.cancelScheduledValues(audioCtx.currentTime);
+  master.gain.linearRampToValueAtTime(master.gain.value, audioCtx.currentTime);
+  master.gain.linearRampToValueAtTime(0.0, audioCtx.currentTime + 0.8);
+  audioOn = false; updateAudioBtn();
+}
+function updateAudioBtn(){
+  const b = document.getElementById('audioBtn');
+  b.textContent = audioOn ? 'AUDIO: ON' : 'AUDIO: OFF';
+}
+function maybeStartAudio(){ if(!audioOn) startAudio(); }
+
+document.getElementById('audioBtn').addEventListener('click', ()=>{
+  if(!audioCtx || !audioOn){ startAudio(); } else { stopAudio(); }
+});
 </script>
 </body>
 </html>
