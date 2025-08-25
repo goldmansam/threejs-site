@@ -3,146 +3,186 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Sam Goldman — 3D Particle Space</title>
+<title>Samuel Goldman — 3D Particle Space</title>
 <style>
   html, body { height: 100%; margin: 0; background: #0a0b10; overflow: hidden; }
   canvas { display: block; }
-  /* HUD */
-  .hud {
-    position: fixed; left: 14px; bottom: 14px; z-index: 10;
-    color: #e8eef8; font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    background: rgba(10,12,18,.45); border: 1px solid rgba(255,255,255,.12);
-    border-radius: 10px; padding: 10px 12px; backdrop-filter: blur(6px);
+
+  /* Left rail menu */
+  .rail {
+    position: fixed; inset: 0 auto 0 0; width: 210px; z-index: 20;
+    padding: 18px 14px; display: grid; gap: 10px; align-content: start;
+    background: linear-gradient(180deg, rgba(10,12,18,.7), rgba(10,12,18,.35));
+    border-right: 1px solid rgba(255,255,255,.08);
+    backdrop-filter: blur(8px);
+    color: #e8eef8; font: 14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   }
-  .hud b { font-weight: 700; }
-  .hud .row { opacity: .85 }
-  .hud .row + .row { margin-top: 4px; }
+  .brand { font-weight: 700; letter-spacing: .01em; opacity: .95; }
+  .vnav { display: grid; gap: 8px; margin-top: 6px; }
+  .vnav button {
+    appearance: none; border: 1px solid rgba(255,255,255,.14);
+    background: rgba(20,22,28,.45); color: #e8eef8;
+    padding: 10px 12px; border-radius: 999px; text-align: left; cursor: pointer;
+    transition: border-color .16s ease, background .16s ease, transform .12s ease, color .16s ease;
+  }
+  .vnav button:hover { border-color: rgba(255,255,255,.28); background: rgba(28,30,36,.55); }
+  .vnav button:active { transform: scale(.98); }
+  .vnav button.active { color:#9ff; border-color: rgba(160,240,255,.55); }
+
+  /* HUD & prompts */
+  .hud {
+    position: fixed; left: 230px; bottom: 12px; z-index: 15;
+    color: #a9b6c9; font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: rgba(10,12,18,.45); border: 1px solid rgba(255,255,255,.12);
+    border-radius: 10px; padding: 8px 10px; backdrop-filter: blur(6px);
+  }
   .topright {
-    position: fixed; right: 14px; top: 14px; z-index: 10;
+    position: fixed; right: 14px; top: 14px; z-index: 15;
     color: #a9b6c9; font: 12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     background: rgba(10,12,18,.45); border: 1px solid rgba(255,255,255,.12);
     border-radius: 999px; padding: 6px 10px; backdrop-filter: blur(6px);
   }
+  .overlay {
+    position: fixed; inset: 0; display: grid; place-items: center; z-index: 25; pointer-events: none;
+  }
+  .prompt {
+    color:#e8eef8; font: 18px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background: rgba(10,12,18,.6); border: 1px solid rgba(255,255,255,.15);
+    padding: 14px 18px; border-radius: 12px; backdrop-filter: blur(6px); opacity: .95;
+    pointer-events: auto;
+  }
+  .prompt.hide { display:none; }
+
+  @media (max-width: 920px) {
+    .rail { width: 170px; }
+    .hud { left: 190px; }
+  }
 </style>
 </head>
 <body>
-<div class="topright">Move mouse = look • Scroll = move • Click = name outline</div>
-<div class="hud">
-  <div class="row"><b>Goal</b> Beautiful 3D dark space, vibrant particles.</div>
-  <div class="row">Hover = particles react • Click = form <b>Samuel Goldman</b></div>
-  <div class="row">Scroll/Pinch = dolly • Subtle yaw/pitch follows mouse</div>
-</div>
+  <!-- Left menu -->
+  <aside class="rail">
+    <div class="brand">Samuel Goldman</div>
+    <div class="vnav">
+      <button data-stop="start" class="active">Start</button>
+      <button data-stop="work">Work</button>
+      <button data-stop="about">About</button>
+      <button data-stop="contact">Contact</button>
+    </div>
+  </aside>
+
+  <div class="topright">Move mouse = look • Scroll or use menu = move • Click = reveal / name outline</div>
+  <div class="hud">Hover swirls particles. Signs glow in as you arrive.</div>
+
+  <div class="overlay">
+    <div id="prompt" class="prompt">Click to reveal: <b>Samuel Goldman Portfolio</b></div>
+  </div>
 
 <script type="module">
 import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
 
-//
-// ----------------------- CONFIG -----------------------
+/* ---------------- CONFIG ---------------- */
 const CONFIG = {
-  COUNT: 12000,           // total particles
-  BOX: 120,               // spatial extent (cube half-size in world units)
-  BASE_SPEED: 0.03,       // drift baseline
-  HOVER_RADIUS: 10,       // hover influence radius (world units)
-  HOVER_FORCE: 0.25,      // repulsion magnitude
-  DAMPING: 0.985,         // velocity damping
+  COUNT: 12000,
+  BOX: 120,
+  BASE_SPEED: 0.03,
+  HOVER_RADIUS: 10,
+  HOVER_FORCE: 0.22,
+  DAMPING: 0.985,
   CAMERA_FOV: 60,
-  CAMERA_START_Z: 160,    // start outside the cloud
-  CAMERA_MIN_Z: -240,     // far end (scroll forward)
-  CAMERA_MAX_Z: 220,      // far back (scroll backward)
-  SIGN_Z: [-40, -120, -200],  // z positions for Work/About/Contact
-  SIGN_SIZE: 28,          // text plane size
-  SIGN_GLOW: 0.85,        // sprite glow factor
-  NAME: "Samuel Goldman",
-  NAME_SIZE: 1100,        // canvas px for name rasterization
-  NAME_STEP: 4,           // sampling step (lower = more points)
-  NAME_DEPTH: 3,          // Z thickness range for the name (±)
-  NAME_OUTLINE_ONLY: true // edge-detect instead of filled
+  CAMERA_START_Z: 150,
+
+  // Section depths (z)
+  SIGN_Z: { work: -40, about: -120, contact: -200 },
+
+  SIGN_SIZE: 28,
+  SIGN_GLOW: 0.85,
+
+  NAME_PRIMARY: "Samuel Goldman Portfolio",
+  NAME_OUTLINE: "Samuel Goldman",
+  NAME_SIZE: 1200,  // canvas px for raster
+  NAME_STEP: 4,     // sampling step (lower = more dots)
+  NAME_DEPTH: 3,
+  NAME_OUTLINE_ONLY: true,
+
+  // Morph feel
+  ATTRACT_STRENGTH: 0.010,
+  MORPH_IN_RATE: 0.02,   // how fast morph factor rises
+  MORPH_OUT_RATE: 0.03,  // how fast morph factor falls
+  HOLD_SECONDS_FIRST: 2.8 // first reveal hold time
 };
 
-// Palette (teal, magenta, amber variants)
+const CAMERA_MAX_Z = 220;                    // far back (zoom out)
+const CAMERA_MIN_Z = CONFIG.SIGN_Z.contact;  // forward limit (contact)
+const CONTACT_Z = CAMERA_MIN_Z;              // alias
+const SCROLL_STEP = 8;                       // per wheel "tick"
+
 const PALETTE = [
   [0.30, 0.85, 0.90], [0.90, 0.35, 0.85], [0.85, 0.75, 0.30],
   [0.40, 0.95, 0.85], [0.95, 0.40, 0.70], [0.75, 0.85, 0.35]
 ];
 
-// ----------------------- SCENE -----------------------
+/* ---------------- SCENE ---------------- */
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x0b0c10, 0.008);
 
-const camera = new THREE.PerspectiveCamera(CONFIG.CAMERA_FOV, window.innerWidth / window.innerHeight, 0.1, 2000);
+const camera = new THREE.PerspectiveCamera(CONFIG.CAMERA_FOV, innerWidth/innerHeight, 0.1, 2000);
 camera.position.set(0, 0, CONFIG.CAMERA_START_Z);
 
-// camera rig for subtle yaw/pitch
 const rig = new THREE.Object3D();
-rig.position.set(0, 0, 0);
 scene.add(rig);
 rig.add(camera);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setClearColor(0x0a0b10, 1);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
-// gradient-ish background via tone
-renderer.outputColorSpace = THREE.SRGBColorSpace;
+scene.add(new THREE.AmbientLight(0x334455, 0.55));
 
-// A very subtle ambient light tint (cosmetic)
-const ambient = new THREE.AmbientLight(0x334455, 0.5);
-scene.add(ambient);
-
-// ----------------------- PARTICLES -----------------------
+/* ---------------- PARTICLES ---------------- */
 const count = CONFIG.COUNT;
-const positions = new Float32Array(count * 3);
-const colors = new Float32Array(count * 3);
-const velocities = new Float32Array(count * 3); // vx,vy,vz
-const targets = new Float32Array(count * 3);    // for name shape mode
-const hasTarget = new Uint8Array(count);        // 1 if this particle has a target
+const positions = new Float32Array(count*3);
+const velocities = new Float32Array(count*3);
+const colors = new Float32Array(count*3);
+const targets = new Float32Array(count*3);
+const hasTarget = new Uint8Array(count);
 
 const rand = (a,b)=>a + Math.random()*(b-a);
-const BOX = CONFIG.BOX;
-
 for (let i=0;i<count;i++){
-  const i3 = i*3;
-  positions[i3+0] = rand(-BOX, BOX);
-  positions[i3+1] = rand(-BOX, BOX);
-  positions[i3+2] = rand(-BOX, BOX);
-
-  // small random velocities
+  const i3=i*3;
+  positions[i3+0] = rand(-CONFIG.BOX, CONFIG.BOX);
+  positions[i3+1] = rand(-CONFIG.BOX, CONFIG.BOX);
+  positions[i3+2] = rand(-CONFIG.BOX, CONFIG.BOX);
   velocities[i3+0] = rand(-CONFIG.BASE_SPEED, CONFIG.BASE_SPEED);
   velocities[i3+1] = rand(-CONFIG.BASE_SPEED, CONFIG.BASE_SPEED);
   velocities[i3+2] = rand(-CONFIG.BASE_SPEED, CONFIG.BASE_SPEED);
-
   const c = PALETTE[(Math.random()*PALETTE.length)|0];
-  colors[i3+0] = c[0]; colors[i3+1] = c[1]; colors[i3+2] = c[2];
-
-  hasTarget[i] = 0;
+  colors[i3+0]=c[0]; colors[i3+1]=c[1]; colors[i3+2]=c[2];
 }
 
 const geom = new THREE.BufferGeometry();
-geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-geom.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-geom.computeBoundingSphere();
-
+geom.setAttribute("position", new THREE.BufferAttribute(positions,3));
+geom.setAttribute("color", new THREE.BufferAttribute(colors,3));
 const mat = new THREE.PointsMaterial({
   size: 0.55, sizeAttenuation: true,
   vertexColors: true,
-  transparent: true, opacity: 0.95,
-  depthWrite: false
+  transparent: true, opacity: 0.95, depthWrite: false
 });
-
 const points = new THREE.Points(geom, mat);
 scene.add(points);
 
-// ----------------------- SIGNS (Work/About/Contact) -----------------------
+/* ---------------- SIGNS ---------------- */
 function makeTextSprite(label, colorA="#8af", colorB="#f8a", glow=CONFIG.SIGN_GLOW) {
   const size = 512;
   const cnv = document.createElement("canvas");
   cnv.width = cnv.height = size;
   const ctx = cnv.getContext("2d");
-  // base transparent
   ctx.clearRect(0,0,size,size);
-  // neon glow behind text
+
+  // neon halo
   const grad = ctx.createRadialGradient(size/2, size/2, 10, size/2, size/2, size/2);
   grad.addColorStop(0, hexToRgba(colorA, 0.35*glow));
   grad.addColorStop(0.6, hexToRgba(colorB, 0.25*glow));
@@ -161,7 +201,7 @@ function makeTextSprite(label, colorA="#8af", colorB="#f8a", glow=CONFIG.SIGN_GL
 
   const tex = new THREE.CanvasTexture(cnv);
   tex.colorSpace = THREE.SRGBColorSpace;
-  const spMat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+  const spMat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0 });
   const sprite = new THREE.Sprite(spMat);
   const s = CONFIG.SIGN_SIZE;
   sprite.scale.set(s, s, 1);
@@ -179,17 +219,13 @@ const signs = [
   makeTextSprite("About", "#aff", "#ffa"),
   makeTextSprite("Contact", "#f8a", "#8af")
 ];
+signs[0].position.set(0, 0, CONFIG.SIGN_Z.work);
+signs[1].position.set(0, 0, CONFIG.SIGN_Z.about);
+signs[2].position.set(0, 0, CONFIG.SIGN_Z.contact);
+signs.forEach(s => scene.add(s));
 
-for (let i=0;i<signs.length;i++){
-  const s = signs[i];
-  s.position.set(0, 0, CONFIG.SIGN_Z[i]);
-  scene.add(s);
-}
-
-// ----------------------- NAME OUTLINE TARGETS -----------------------
-let nameTargets = null;
-function buildNameTargets() {
-  // rasterize big text then sample edge pixels
+/* ---------------- NAME TARGETS ---------------- */
+function buildTextTargets(text, outlineOnly=true){
   const W = CONFIG.NAME_SIZE, H = Math.round(CONFIG.NAME_SIZE * 0.22);
   const cnv = document.createElement("canvas");
   cnv.width = W; cnv.height = H;
@@ -198,116 +234,158 @@ function buildNameTargets() {
   ctx.fillStyle = "#fff";
   ctx.font = `bold ${Math.round(H*0.8)}px system-ui, Arial`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText(CONFIG.NAME, W/2, H/2);
-
+  ctx.fillText(text, W/2, H/2);
   const img = ctx.getImageData(0,0,W,H).data;
   const pts = [];
   const step = CONFIG.NAME_STEP;
-
-  function alphaAt(x,y){
-    const i = (y*W + x)*4 + 3;
-    return img[i];
-  }
+  const alphaAt = (x,y)=> img[(y*W + x)*4 + 3];
   for (let y=step; y<H-step; y+=step){
     for (let x=step; x<W-step; x+=step){
       const a = alphaAt(x,y);
       if (a>128){
-        if (!CONFIG.NAME_OUTLINE_ONLY) {
+        if (!outlineOnly){
           pts.push([x,y]);
         } else {
-          // edge detection: if any neighbor is background, keep
           const nb = (alphaAt(x+step,y)<128) || (alphaAt(x-step,y)<128) || (alphaAt(x,y+step)<128) || (alphaAt(x,y-step)<128);
           if (nb) pts.push([x,y]);
         }
       }
     }
   }
-  // map to world coords around z≈0
-  // width -> ~ 80 world units
   const scale = 80 / W;
-  const result = pts.map(([x,y])=> {
-    const wx = (x - W/2) * scale;
-    const wy = (H/2 - y) * scale; // flip y
-    const wz = THREE.MathUtils.randFloatSpread(CONFIG.NAME_DEPTH*2);
-    return [wx, wy, wz];
-  });
-  nameTargets = result;
+  return pts.map(([x,y])=> [(x - W/2) * scale, (H/2 - y) * scale, THREE.MathUtils.randFloatSpread(CONFIG.NAME_DEPTH*2)]);
 }
-buildNameTargets();
 
-// assign targets to a subset on click
-let shapeMode = false;
-function enterShapeMode(){
-  if (!nameTargets || nameTargets.length === 0) return;
-  // pick particles to use
-  const useCount = Math.min(nameTargets.length, Math.floor(count*0.65));
-  const chosen = new Uint32Array(useCount);
-  // choose randomly unique indices
-  const chosenSet = new Set();
-  while (chosenSet.size < useCount) {
-    chosenSet.add((Math.random()*count)|0);
-  }
-  let idx=0;
-  chosenSet.forEach(v => chosen[idx++] = v);
-  // assign
-  for (let i=0;i<count;i++) hasTarget[i]=0;
-  for (let i=0;i<useCount;i++){
-    const pIndex = chosen[i];
-    const ti = (Math.random()*nameTargets.length)|0;
-    const [tx,ty,tz] = nameTargets[ti];
+const NAME_PRIMARY_TARGETS = buildTextTargets(CONFIG.NAME_PRIMARY, false);
+const NAME_OUTLINE_TARGETS = buildTextTargets(CONFIG.NAME_OUTLINE, CONFIG.NAME_OUTLINE_ONLY);
+
+let morph = 0;               // 0..1
+let morphTargetArray = null; // which set we're morphing to
+let morphMode = "none";      // "none" | "primary" | "outline"
+let firstRevealDone = false;
+
+// Assign targets to a random subset of particles, store hasTarget/targets
+function assignTargets(array) {
+  morphTargetArray = array;
+  hasTarget.fill(0);
+  const useCount = Math.min(array.length, Math.floor(count*0.7));
+  const chosen = new Set();
+  while (chosen.size < useCount) chosen.add((Math.random()*count)|0);
+  let idx = 0;
+  for (const pIndex of chosen) {
+    const ti = (Math.random()*array.length)|0;
+    const [tx,ty,tz] = array[ti];
     targets[pIndex*3+0] = tx;
     targets[pIndex*3+1] = ty;
     targets[pIndex*3+2] = tz;
     hasTarget[pIndex] = 1;
+    idx++;
   }
-  shapeMode = true;
-}
-function exitShapeMode(){
-  shapeMode = false;
-  for (let i=0;i<count;i++) hasTarget[i]=0;
 }
 
-// ----------------------- INTERACTION -----------------------
+function startPrimaryReveal() {
+  assignTargets(NAME_PRIMARY_TARGETS);
+  morphMode = "primary";
+  // fade prompt out
+  document.getElementById("prompt")?.classList.add("hide");
+  // animate morph up, hold, then morph out
+  morph = 0;
+  const up = () => {
+    morph = Math.min(1, morph + CONFIG.MORPH_IN_RATE);
+    if (morph < 1) requestAnimationFrame(up);
+    else setTimeout(down, CONFIG.HOLD_SECONDS_FIRST * 1000);
+  };
+  const down = () => {
+    morph = Math.max(0, morph - CONFIG.MORPH_OUT_RATE);
+    if (morph > 0) requestAnimationFrame(down);
+    else { morphMode = "none"; hasTarget.fill(0); firstRevealDone = true; }
+  };
+  requestAnimationFrame(up);
+}
+
+function toggleOutlineMorph() {
+  if (morphMode === "outline") {
+    // morph out
+    const step = () => {
+      morph = Math.max(0, morph - CONFIG.MORPH_OUT_RATE);
+      if (morph > 0) requestAnimationFrame(step);
+      else { morphMode = "none"; hasTarget.fill(0); }
+    };
+    requestAnimationFrame(step);
+  } else {
+    assignTargets(NAME_OUTLINE_TARGETS);
+    morphMode = "outline";
+    const step = () => {
+      morph = Math.min(1, morph + CONFIG.MORPH_IN_RATE * 0.7);
+      if (morph < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+}
+
+/* ---------------- INTERACTION ---------------- */
 let targetCamZ = CONFIG.CAMERA_START_Z;
 let mouseX = 0, mouseY = 0; // -1..1
 let yaw = 0, pitch = 0, targetYaw = 0, targetPitch = 0;
 
 function onResize(){
-  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.aspect = innerWidth/innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(innerWidth, innerHeight);
 }
-window.addEventListener("resize", onResize);
+addEventListener("resize", onResize);
 
 function onPointerMove(e){
-  const nx = (e.clientX / window.innerWidth) * 2 - 1;
-  const ny = (e.clientY / window.innerHeight) * 2 - 1;
+  const nx = (e.clientX / innerWidth) * 2 - 1;
+  const ny = (e.clientY / innerHeight) * 2 - 1;
   mouseX = nx; mouseY = ny;
-  targetYaw = nx * 0.25;   // radians-ish
+  targetYaw = nx * 0.25;
   targetPitch = -ny * 0.15;
 }
-window.addEventListener("pointermove", onPointerMove, { passive: true });
+addEventListener("pointermove", onPointerMove, { passive: true });
 
+// Allow backward scroll at Contact, but block forward past Contact
 function onWheel(e){
-  // dolly camera along -Z when scrolling down
-  const delta = Math.sign(e.deltaY);
-  targetCamZ += delta * 8;
-  targetCamZ = THREE.MathUtils.clamp(targetCamZ, CONFIG.CAMERA_MIN_Z, CONFIG.CAMERA_MAX_Z);
-}
-window.addEventListener("wheel", onWheel, { passive: true });
+  const dir = Math.sign(e.deltaY); // +1 = wheel down, -1 = wheel up
+  // Map: wheel down -> move forward (toward negative z)
+  const intended = targetCamZ + (-dir) * SCROLL_STEP;
 
-window.addEventListener("pointerdown", ()=>{
-  // toggle shape mode
-  if (!shapeMode) enterShapeMode(); else exitShapeMode();
+  // If we're at or beyond Contact and trying to go further forward (more negative), block it
+  if (targetCamZ <= CONTACT_Z && intended < CONTACT_Z) {
+    // prevent "forward" at the stop, but still allow backward (dir < 0)
+    e.preventDefault();
+    return;
+  }
+  targetCamZ = THREE.MathUtils.clamp(intended, CAMERA_MIN_Z, CAMERA_MAX_Z);
+}
+addEventListener("wheel", onWheel, { passive: false });
+
+// Click behavior: first click = primary reveal; later clicks toggle outline
+addEventListener("pointerdown", () => {
+  if (!firstRevealDone) startPrimaryReveal();
+  else toggleOutlineMorph();
 });
 
-// ----------------------- HOVER FORCE (world point) -----------------------
+/* Left menu jumps */
+const stops = {
+  start: CONFIG.CAMERA_START_Z,
+  work:  CONFIG.SIGN_Z.work + 12,
+  about: CONFIG.SIGN_Z.about + 12,
+  contact: CONTACT_Z
+};
+document.querySelectorAll('.vnav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.vnav button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    targetCamZ = stops[btn.dataset.stop];
+  });
+});
+
+/* ---------------- HOVER FORCE ---------------- */
 const ray = new THREE.Ray();
 const plane = new THREE.Plane(new THREE.Vector3(0,0,1), 0); // z=0 plane
 const hoverPoint = new THREE.Vector3(0,0,0);
-
 function updateHoverPoint(){
-  // Ray from camera through NDC (mouseX,mouseY), intersect z=0 plane
   const ndc = new THREE.Vector3(mouseX, mouseY, 0.5);
   ndc.unproject(camera);
   ray.origin.copy(camera.position);
@@ -315,55 +393,51 @@ function updateHoverPoint(){
   ray.intersectPlane(plane, hoverPoint);
 }
 
-// ----------------------- ANIMATE -----------------------
+/* ---------------- ANIMATE ---------------- */
 const clock = new THREE.Clock();
-
 function animate(){
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
 
-  // ease camera dolly + rig rotation
-  camera.position.z += (targetCamZ - camera.position.z) * 0.08;
+  // Ease camera to target, clamp forward at Contact
+  const nextZ = camera.position.z + (targetCamZ - camera.position.z) * 0.08;
+  camera.position.z = (nextZ < CONTACT_Z) ? CONTACT_Z : nextZ;
+
+  // subtle rig rotation
   yaw += (targetYaw - yaw) * 0.06;
   pitch += (targetPitch - pitch) * 0.06;
   rig.rotation.set(pitch, yaw, 0);
 
   updateHoverPoint();
 
-  // update particles
+  // Update particles
   const pos = geom.attributes.position.array;
   for (let i=0;i<count;i++){
     const i3 = i*3;
 
-    // base drift
-    velocities[i3+0] *= CONFIG.DAMPING;
-    velocities[i3+1] *= CONFIG.DAMPING;
-    velocities[i3+2] *= CONFIG.DAMPING;
+    // damping + tiny wander
+    velocities[i3+0] = velocities[i3+0]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
+    velocities[i3+1] = velocities[i3+1]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
+    velocities[i3+2] = velocities[i3+2]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
 
-    // gentle noise-like wander
-    velocities[i3+0] += (Math.random()-0.5) * CONFIG.BASE_SPEED * 0.02;
-    velocities[i3+1] += (Math.random()-0.5) * CONFIG.BASE_SPEED * 0.02;
-    velocities[i3+2] += (Math.random()-0.5) * CONFIG.BASE_SPEED * 0.02;
-
-    // hover repulsion field centered at hoverPoint
+    // hover repulsion
     const dx = pos[i3+0] - hoverPoint.x;
     const dy = pos[i3+1] - hoverPoint.y;
     const dz = pos[i3+2] - hoverPoint.z;
-    const dist2 = dx*dx + dy*dy + dz*dz;
     const r2 = CONFIG.HOVER_RADIUS*CONFIG.HOVER_RADIUS;
-    if (dist2 < r2) {
-      const f = (1 - dist2/r2) * CONFIG.HOVER_FORCE;
-      velocities[i3+0] += (dx) * f * dt * 30;
-      velocities[i3+1] += (dy) * f * dt * 30;
-      velocities[i3+2] += (dz) * f * dt * 30;
+    const d2 = dx*dx + dy*dy + dz*dz;
+    if (d2 < r2) {
+      const f = (1 - d2/r2) * CONFIG.HOVER_FORCE;
+      velocities[i3+0] += dx * f * dt * 30;
+      velocities[i3+1] += dy * f * dt * 30;
+      velocities[i3+2] += dz * f * dt * 30;
     }
 
-    // if shaping, attract to target
-    if (shapeMode && hasTarget[i]) {
-      const tx = targets[i3+0], ty = targets[i3+1], tz = targets[i3+2];
-      velocities[i3+0] += (tx - pos[i3+0]) * 0.012;
-      velocities[i3+1] += (ty - pos[i3+1]) * 0.012;
-      velocities[i3+2] += (tz - pos[i3+2]) * 0.012;
+    // morph attraction (scaled by morph 0..1)
+    if (hasTarget[i] && morph > 0) {
+      velocities[i3+0] += (targets[i3+0] - pos[i3+0]) * CONFIG.ATTRACT_STRENGTH * morph;
+      velocities[i3+1] += (targets[i3+1] - pos[i3+1]) * CONFIG.ATTRACT_STRENGTH * morph;
+      velocities[i3+2] += (targets[i3+2] - pos[i3+2]) * CONFIG.ATTRACT_STRENGTH * morph;
     }
 
     // integrate
@@ -371,25 +445,31 @@ function animate(){
     pos[i3+1] += velocities[i3+1];
     pos[i3+2] += velocities[i3+2];
 
-    // wrap in a large box
-    if (pos[i3+0] < -BOX) pos[i3+0] += 2*BOX; else if (pos[i3+0] > BOX) pos[i3+0] -= 2*BOX;
-    if (pos[i3+1] < -BOX) pos[i3+1] += 2*BOX; else if (pos[i3+1] > BOX) pos[i3+1] -= 2*BOX;
-    if (pos[i3+2] < -BOX) pos[i3+2] += 2*BOX; else if (pos[i3+2] > BOX) pos[i3+2] -= 2*BOX;
+    // wrap within a big box so space never "empties"
+    const B = CONFIG.BOX;
+    if (pos[i3+0] < -B) pos[i3+0] += 2*B; else if (pos[i3+0] > B) pos[i3+0] -= 2*B;
+    if (pos[i3+1] < -B) pos[i3+1] += 2*B; else if (pos[i3+1] > B) pos[i3+1] -= 2*B;
+    if (pos[i3+2] < -B) pos[i3+2] += 2*B; else if (pos[i3+2] > B) pos[i3+2] -= 2*B;
   }
   geom.attributes.position.needsUpdate = true;
 
-  // sign facing & fade based on camera distance
-  for (let i=0;i<signs.length;i++){
-    const s = signs[i];
+  // Signs face camera & fade by distance
+  for (const s of signs){
     s.lookAt(camera.position);
     const d = Math.abs(camera.position.z - s.position.z);
-    const vis = THREE.MathUtils.clamp(1 - (d/60), 0, 1); // fade in within ~60 units
+    const vis = THREE.MathUtils.clamp(1 - (d/60), 0, 1);
     s.material.opacity = vis;
   }
 
   renderer.render(scene, camera);
 }
 animate();
+
+// Activate first prompt click
+const prompt = document.getElementById("prompt");
+document.addEventListener("click", () => {
+  if (!firstRevealDone && prompt) prompt.classList.add("hide");
+}, { once: true });
 </script>
 </body>
 </html>
