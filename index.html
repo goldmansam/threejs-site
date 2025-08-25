@@ -71,7 +71,7 @@
     </div>
   </aside>
 
-  <div class="topright">Move mouse = look • Scroll or use menu = move • Click = reveal / name outline</div>
+  <div class="topright">Move mouse = look • Scroll/menu = move • Click = reveal / name outline</div>
   <div class="hud">Hover swirls particles. Signs glow in as you arrive.</div>
 
   <div class="overlay">
@@ -83,7 +83,7 @@ import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
 
 /* ---------------- CONFIG ---------------- */
 const CONFIG = {
-  COUNT: 12000,
+  COUNT: 14000,
   BOX: 120,
   BASE_SPEED: 0.03,
   HOVER_RADIUS: 10,
@@ -95,27 +95,27 @@ const CONFIG = {
   // Section depths (z)
   SIGN_Z: { work: -40, about: -120, contact: -200 },
 
-  SIGN_SIZE: 28,
-  SIGN_GLOW: 0.85,
+  SIGN_SIZE: 32,          // bigger so long words never clip
+  SIGN_GLOW: 0.9,
 
   NAME_PRIMARY: "Samuel Goldman Portfolio",
   NAME_OUTLINE: "Samuel Goldman",
-  NAME_SIZE: 1200,  // canvas px for raster
-  NAME_STEP: 4,     // sampling step (lower = more dots)
+  NAME_SIZE: 1200,  // raster canvas width
+  NAME_STEP: 4,
   NAME_DEPTH: 3,
   NAME_OUTLINE_ONLY: true,
 
-  // Morph feel
+  // Morph feel (slower/clearer)
   ATTRACT_STRENGTH: 0.010,
-  MORPH_IN_RATE: 0.02,   // how fast morph factor rises
-  MORPH_OUT_RATE: 0.03,  // how fast morph factor falls
-  HOLD_SECONDS_FIRST: 2.8 // first reveal hold time
+  MORPH_IN_RATE: 0.016,   // slower in
+  MORPH_OUT_RATE: 0.022,  // slower out
+  HOLD_SECONDS_FIRST: 2.8
 };
 
-const CAMERA_MAX_Z = 220;                    // far back (zoom out)
-const CAMERA_MIN_Z = CONFIG.SIGN_Z.contact;  // forward limit (contact)
-const CONTACT_Z = CAMERA_MIN_Z;              // alias
-const SCROLL_STEP = 8;                       // per wheel "tick"
+const CAMERA_MAX_Z = 220;                    // back
+const CAMERA_MIN_Z = CONFIG.SIGN_Z.contact;  // forward stop
+const CONTACT_Z = CAMERA_MIN_Z;
+const SCROLL_STEP = 8;
 
 const PALETTE = [
   [0.30, 0.85, 0.90], [0.90, 0.35, 0.85], [0.85, 0.75, 0.30],
@@ -140,7 +140,28 @@ renderer.setClearColor(0x0a0b10, 1);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
-scene.add(new THREE.AmbientLight(0x334455, 0.55));
+scene.add(new THREE.AmbientLight(0x334455, 0.6));
+
+/* ---------------- ROUND PARTICLE SPRITE ---------------- */
+function makeDotTexture(size=64){
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const g = c.getContext("2d");
+  const r = size/2;
+  const grad = g.createRadialGradient(r, r, 0, r, r, r);
+  grad.addColorStop(0, "rgba(255,255,255,1)");
+  grad.addColorStop(0.7, "rgba(255,255,255,0.9)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = grad;
+  g.beginPath(); g.arc(r, r, r, 0, Math.PI*2); g.fill();
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
+  return tex;
+}
+const dotTex = makeDotTexture();
 
 /* ---------------- PARTICLES ---------------- */
 const count = CONFIG.COUNT;
@@ -168,56 +189,73 @@ geom.setAttribute("position", new THREE.BufferAttribute(positions,3));
 geom.setAttribute("color", new THREE.BufferAttribute(colors,3));
 const mat = new THREE.PointsMaterial({
   size: 0.55, sizeAttenuation: true,
+  map: dotTex, alphaTest: 0.02,
   vertexColors: true,
   transparent: true, opacity: 0.95, depthWrite: false
 });
 const points = new THREE.Points(geom, mat);
 scene.add(points);
 
-/* ---------------- SIGNS ---------------- */
-function makeTextSprite(label, colorA="#8af", colorB="#f8a", glow=CONFIG.SIGN_GLOW) {
-  const size = 512;
-  const cnv = document.createElement("canvas");
-  cnv.width = cnv.height = size;
-  const ctx = cnv.getContext("2d");
-  ctx.clearRect(0,0,size,size);
+/* ---------------- PIXELATED TEXT SPRITES ---------------- */
+function makePixelTextSprite(label, tintA="#8af", tintB="#f8a") {
+  // Step 1: draw LOW-RES text (intentionally chunky)
+  const srcH = 64; // pixel height of the text rendering (lower = more pixelation)
+  const src = document.createElement("canvas");
+  const sctx = src.getContext("2d");
+  sctx.font = `700 ${srcH}px system-ui, -apple-system, Segoe UI, Arial`;
+  const metrics = sctx.measureText(label);
+  const margin = 8;
+  src.width = Math.ceil(metrics.width) + margin*2;
+  src.height = srcH + margin*2;
+  sctx.font = `700 ${srcH}px system-ui, -apple-system, Segoe UI, Arial`;
+  sctx.textBaseline = "middle";
+  sctx.textAlign = "center";
+  sctx.fillStyle = "#fff";
+  sctx.imageSmoothingEnabled = false;
+  sctx.fillText(label, src.width/2, src.height/2);
 
-  // neon halo
-  const grad = ctx.createRadialGradient(size/2, size/2, 10, size/2, size/2, size/2);
-  grad.addColorStop(0, hexToRgba(colorA, 0.35*glow));
-  grad.addColorStop(0.6, hexToRgba(colorB, 0.25*glow));
+  // Step 2: scale into a square texture with NEAREST scaling + glow
+  const size = 1024; // large texture so sprite stays crisp
+  const texC = document.createElement("canvas");
+  texC.width = texC.height = size;
+  const tctx = texC.getContext("2d");
+  tctx.clearRect(0,0,size,size);
+  tctx.imageSmoothingEnabled = false;
+
+  // neon halo underlay
+  const grad = tctx.createRadialGradient(size/2, size/2, 10, size/2, size/2, size/2);
+  const hexToRgba = (h,a=1)=>{const n=parseInt(h.replace("#",""),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`};
+  grad.addColorStop(0, hexToRgba(tintA, 0.35));
+  grad.addColorStop(0.6, hexToRgba(tintB, 0.25));
   grad.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0,0,size,size);
+  tctx.fillStyle = grad;
+  tctx.fillRect(0,0,size,size);
 
-  // text
-  ctx.fillStyle = "#e8f0ff";
-  ctx.shadowColor = colorA;
-  ctx.shadowBlur = 32;
-  ctx.font = "700 180px system-ui, -apple-system, Segoe UI, Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(label, size/2, size/2);
+  // center-fit the low-res text into the square, with padding
+  const scale = Math.min((size*0.8)/src.width, (size*0.45)/src.height);
+  const w = Math.floor(src.width * scale);
+  const h = Math.floor(src.height * scale);
+  const x = Math.floor((size - w)/2);
+  const y = Math.floor((size - h)/2);
+  tctx.drawImage(src, 0,0, src.width,src.height, x,y,w,h);
 
-  const tex = new THREE.CanvasTexture(cnv);
+  const tex = new THREE.CanvasTexture(texC);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.magFilter = THREE.NearestFilter; // <- deliberate pixelation
+  tex.minFilter = THREE.NearestFilter;
+  tex.generateMipmaps = false;
+
   const spMat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0 });
   const sprite = new THREE.Sprite(spMat);
   const s = CONFIG.SIGN_SIZE;
   sprite.scale.set(s, s, 1);
   return sprite;
 }
-function hexToRgba(hex, a=1){
-  const h = hex.replace("#","");
-  const n = parseInt(h,16);
-  const r=(n>>16)&255, g=(n>>8)&255, b=n&255;
-  return `rgba(${r},${g},${b},${a})`;
-}
 
 const signs = [
-  makeTextSprite("Work", "#5ff", "#f8a"),
-  makeTextSprite("About", "#aff", "#ffa"),
-  makeTextSprite("Contact", "#f8a", "#8af")
+  makePixelTextSprite("Work", "#5ff", "#f8a"),
+  makePixelTextSprite("About", "#aff", "#ffa"),
+  makePixelTextSprite("Contact", "#f8a", "#8af")
 ];
 signs[0].position.set(0, 0, CONFIG.SIGN_Z.work);
 signs[1].position.set(0, 0, CONFIG.SIGN_Z.about);
@@ -264,14 +302,16 @@ let morphTargetArray = null; // which set we're morphing to
 let morphMode = "none";      // "none" | "primary" | "outline"
 let firstRevealDone = false;
 
-// Assign targets to a random subset of particles, store hasTarget/targets
+const positionsAttr = new THREE.BufferAttribute(positions,3);
+geom.setAttribute("position", positionsAttr);
+
+/* assign targets to a subset */
 function assignTargets(array) {
   morphTargetArray = array;
   hasTarget.fill(0);
-  const useCount = Math.min(array.length, Math.floor(count*0.7));
+  const useCount = Math.min(array.length, Math.floor(count*0.72));
   const chosen = new Set();
   while (chosen.size < useCount) chosen.add((Math.random()*count)|0);
-  let idx = 0;
   for (const pIndex of chosen) {
     const ti = (Math.random()*array.length)|0;
     const [tx,ty,tz] = array[ti];
@@ -279,16 +319,13 @@ function assignTargets(array) {
     targets[pIndex*3+1] = ty;
     targets[pIndex*3+2] = tz;
     hasTarget[pIndex] = 1;
-    idx++;
   }
 }
 
 function startPrimaryReveal() {
   assignTargets(NAME_PRIMARY_TARGETS);
   morphMode = "primary";
-  // fade prompt out
   document.getElementById("prompt")?.classList.add("hide");
-  // animate morph up, hold, then morph out
   morph = 0;
   const up = () => {
     morph = Math.min(1, morph + CONFIG.MORPH_IN_RATE);
@@ -305,7 +342,6 @@ function startPrimaryReveal() {
 
 function toggleOutlineMorph() {
   if (morphMode === "outline") {
-    // morph out
     const step = () => {
       morph = Math.max(0, morph - CONFIG.MORPH_OUT_RATE);
       if (morph > 0) requestAnimationFrame(step);
@@ -325,7 +361,7 @@ function toggleOutlineMorph() {
 
 /* ---------------- INTERACTION ---------------- */
 let targetCamZ = CONFIG.CAMERA_START_Z;
-let mouseX = 0, mouseY = 0; // -1..1
+let mouseX = 0, mouseY = 0;
 let yaw = 0, pitch = 0, targetYaw = 0, targetPitch = 0;
 
 function onResize(){
@@ -344,23 +380,19 @@ function onPointerMove(e){
 }
 addEventListener("pointermove", onPointerMove, { passive: true });
 
-// Allow backward scroll at Contact, but block forward past Contact
+// Allow backward at Contact, block forward past Contact
 function onWheel(e){
-  const dir = Math.sign(e.deltaY); // +1 = wheel down, -1 = wheel up
-  // Map: wheel down -> move forward (toward negative z)
-  const intended = targetCamZ + (-dir) * SCROLL_STEP;
-
-  // If we're at or beyond Contact and trying to go further forward (more negative), block it
+  const dir = Math.sign(e.deltaY);      // +1 = wheel down
+  const intended = targetCamZ + (-dir) * SCROLL_STEP; // wheel down moves forward (more negative)
   if (targetCamZ <= CONTACT_Z && intended < CONTACT_Z) {
-    // prevent "forward" at the stop, but still allow backward (dir < 0)
-    e.preventDefault();
+    e.preventDefault(); // block going further forward
     return;
   }
   targetCamZ = THREE.MathUtils.clamp(intended, CAMERA_MIN_Z, CAMERA_MAX_Z);
 }
 addEventListener("wheel", onWheel, { passive: false });
 
-// Click behavior: first click = primary reveal; later clicks toggle outline
+// Click: first = primary reveal; then toggle outline
 addEventListener("pointerdown", () => {
   if (!firstRevealDone) startPrimaryReveal();
   else toggleOutlineMorph();
@@ -381,6 +413,18 @@ document.querySelectorAll('.vnav button').forEach(btn => {
   });
 });
 
+/* Highlight active menu based on nearest depth */
+function updateActiveNav() {
+  const z = camera.position.z;
+  let key = "start";
+  if (z < (CONFIG.SIGN_Z.work - 20)) key = "work";
+  if (z < (CONFIG.SIGN_Z.about - 20)) key = "about";
+  if (z <= CONTACT_Z + 0.1) key = "contact";
+  document.querySelectorAll('.vnav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.stop === key);
+  });
+}
+
 /* ---------------- HOVER FORCE ---------------- */
 const ray = new THREE.Ray();
 const plane = new THREE.Plane(new THREE.Vector3(0,0,1), 0); // z=0 plane
@@ -399,23 +443,23 @@ function animate(){
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
 
-  // Ease camera to target, clamp forward at Contact
+  // camera ease + clamp forward at Contact
   const nextZ = camera.position.z + (targetCamZ - camera.position.z) * 0.08;
   camera.position.z = (nextZ < CONTACT_Z) ? CONTACT_Z : nextZ;
 
-  // subtle rig rotation
+  // subtle look
   yaw += (targetYaw - yaw) * 0.06;
   pitch += (targetPitch - pitch) * 0.06;
   rig.rotation.set(pitch, yaw, 0);
 
   updateHoverPoint();
 
-  // Update particles
+  // particles
   const pos = geom.attributes.position.array;
   for (let i=0;i<count;i++){
     const i3 = i*3;
 
-    // damping + tiny wander
+    // damping + gentle wander
     velocities[i3+0] = velocities[i3+0]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
     velocities[i3+1] = velocities[i3+1]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
     velocities[i3+2] = velocities[i3+2]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
@@ -445,7 +489,7 @@ function animate(){
     pos[i3+1] += velocities[i3+1];
     pos[i3+2] += velocities[i3+2];
 
-    // wrap within a big box so space never "empties"
+    // wrap
     const B = CONFIG.BOX;
     if (pos[i3+0] < -B) pos[i3+0] += 2*B; else if (pos[i3+0] > B) pos[i3+0] -= 2*B;
     if (pos[i3+1] < -B) pos[i3+1] += 2*B; else if (pos[i3+1] > B) pos[i3+1] -= 2*B;
@@ -453,7 +497,7 @@ function animate(){
   }
   geom.attributes.position.needsUpdate = true;
 
-  // Signs face camera & fade by distance
+  // signs: face camera, pixelated opacity ramp
   for (const s of signs){
     s.lookAt(camera.position);
     const d = Math.abs(camera.position.z - s.position.z);
@@ -461,15 +505,22 @@ function animate(){
     s.material.opacity = vis;
   }
 
+  updateActiveNav();
   renderer.render(scene, camera);
 }
 animate();
 
-// Activate first prompt click
-const prompt = document.getElementById("prompt");
-document.addEventListener("click", () => {
-  if (!firstRevealDone && prompt) prompt.classList.add("hide");
+// prompt hides on first click (also triggers reveal)
+document.addEventListener("pointerdown", () => {
+  const p = document.getElementById("prompt");
+  if (p) p.classList.add("hide");
 }, { once: true });
+
+/* ------------- click behavior combined with reveal above ------------- */
+addEventListener("pointerdown", () => {
+  if (!firstRevealDone) startPrimaryReveal();
+  else toggleOutlineMorph();
+});
 </script>
 </body>
 </html>
