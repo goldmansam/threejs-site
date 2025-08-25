@@ -4,7 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Sam Goldman — Portfolio</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <!-- Left rail -->
@@ -16,99 +17,77 @@
       <a href="#about">About</a>
       <a href="#contact">Contact</a>
     </nav>
-    <div class="note">Scroll to explore • Click background for a pixel pulse • P toggles steady pixels</div>
+    <div class="note">Scroll to explore · Click the hero to “pixel pulse” · Press P to toggle steady pixels</div>
   </aside>
 
-  <!-- Main content -->
   <main>
-    <!-- HERO / INTRO -->
-    <section id="intro" class="chapter" data-title="Intro">
-      <div class="progress" aria-hidden="true">You’ve discovered 0% of this chapter</div>
-
-      <!-- Parallax background & FX canvas -->
-      <div class="bg parallax" data-speed="0.2" style="--img:url('assets/hero.jpg')"></div>
+    <!-- INTRO -->
+    <section id="intro" class="chapter" data-theme="hero" data-title="Intro">
+      <div class="progress">You’ve discovered 0% of this chapter</div>
+      <div class="bg parallax" data-speed="0.2"></div>
       <canvas id="fx"></canvas>
-
       <div class="wrap">
         <h1 class="reveal">Presence-first interactive work</h1>
-        <p class="reveal delay-1">
-          I design & code sites with cinematic motion, clean typography, and precise interactions.
-        </p>
+        <p class="reveal delay-1">Cinematic motion, clean type, precise interactions — all coded from scratch.</p>
       </div>
     </section>
 
     <!-- WORK -->
-    <section id="work" class="chapter" data-title="Work">
-      <div class="progress" aria-hidden="true">You’ve discovered 0% of this chapter</div>
-      <div class="bg parallax" data-speed="0.15" style="--img:url('assets/work.jpg')"></div>
-
+    <section id="work" class="chapter" data-theme="work" data-title="Work">
+      <div class="progress">You’ve discovered 0% of this chapter</div>
+      <div class="bg parallax" data-speed="0.15"></div>
       <div class="wrap">
         <h2 class="reveal">Selected Work</h2>
         <div class="grid">
-          <!-- Replace thumbs with your images -->
-          <a class="card reveal" href="#" aria-label="Project 1">
-            <img src="assets/thumb1.jpg" alt="Project 1"/>
-            <div class="meta">
-              <h3>Garden Narrative</h3><p>Story scrollytelling + audio</p>
-            </div>
+          <a class="card reveal">
+            <div class="thumb" data-hue="190"></div>
+            <div class="meta"><h3>Garden Narrative</h3><p>Scrollytelling + sound</p></div>
           </a>
-          <a class="card reveal delay-1" href="#" aria-label="Project 2">
-            <img src="assets/thumb2.jpg" alt="Project 2"/>
-            <div class="meta">
-              <h3>Pixel Zoom</h3><p>Canvas particle tunnel</p>
-            </div>
+          <a class="card reveal delay-1">
+            <div class="thumb" data-hue="310"></div>
+            <div class="meta"><h3>Pixel Zoom</h3><p>Canvas particle tunnel</p></div>
           </a>
-          <a class="card reveal delay-2" href="#" aria-label="Project 3">
-            <img src="assets/thumb3.jpg" alt="Project 3"/>
-            <div class="meta">
-              <h3>Chaptered Archive</h3><p>Chapter UI + progress</p>
-            </div>
+          <a class="card reveal delay-2">
+            <div class="thumb" data-hue="0"></div>
+            <div class="meta"><h3>Chaptered Archive</h3><p>Chapter UI + progress</p></div>
           </a>
-          <a class="card reveal delay-3" href="#" aria-label="Project 4">
-            <img src="assets/thumb4.jpg" alt="Project 4"/>
-            <div class="meta">
-              <h3>Audio Salon</h3><p>Curated playlist UX</p>
-            </div>
+          <a class="card reveal delay-3">
+            <div class="thumb" data-hue="165"></div>
+            <div class="meta"><h3>Audio Salon</h3><p>Minimal player UX</p></div>
           </a>
         </div>
       </div>
     </section>
 
     <!-- ABOUT -->
-    <section id="about" class="chapter" data-title="About">
-      <div class="progress" aria-hidden="true">You’ve discovered 0% of this chapter</div>
-      <div class="bg parallax" data-speed="0.1" style="--img:url('assets/about.jpg')"></div>
-
+    <section id="about" class="chapter" data-theme="about" data-title="About">
+      <div class="progress">You’ve discovered 0% of this chapter</div>
+      <div class="bg parallax" data-speed="0.1"></div>
       <div class="wrap">
         <h2 class="reveal">About</h2>
         <p class="reveal delay-1">
           NYC-based creative building presence-first digital experiences and community tools.
           I like ACES-ish grading, slow camera motion, and honest materials (rough, matte).
         </p>
-
-        <!-- Optional: minimalist “salon” player -->
         <div class="player reveal delay-2">
           <button id="playBtn" aria-label="Play/Pause">Play</button>
-          <div class="track">Demo track — Atmos bed</div>
-          <audio id="audio" src="assets/demo.mp3" preload="none"></audio>
+          <div class="track">Demo loop (generated)</div>
+          <audio id="audio"></audio>
         </div>
       </div>
     </section>
 
     <!-- CONTACT -->
-    <section id="contact" class="chapter" data-title="Contact">
-      <div class="progress" aria-hidden="true">You’ve discovered 0% of this chapter</div>
-      <div class="bg parallax" data-speed="0.08" style="--img:url('assets/contact.jpg')"></div>
-
+    <section id="contact" class="chapter" data-theme="contact" data-title="Contact">
+      <div class="progress">You’ve discovered 0% of this chapter</div>
+      <div class="bg parallax" data-speed="0.08"></div>
       <div class="wrap">
         <h2 class="reveal">Contact</h2>
-        <p class="reveal delay-1">
-          <a href="mailto:you@domain.com">you@domain.com</a> · IG <a href="#" target="_blank">@yourhandle</a>
-        </p>
+        <p class="reveal delay-1"><a href="mailto:you@domain.com">you@domain.com</a> · IG <a href="#" target="_blank">@yourhandle</a></p>
       </div>
     </section>
   </main>
 
-  <script src="script.js"></script>
+  <script src="./script.js"></script>
 </body>
 </html>
