@@ -1,75 +1,31 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>3D World Menu · Portfolio</title>
-
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
-
-  <link rel="stylesheet" href="./style.css" />
-
-  <!-- Favicon (inline SVG) -->
-  <link rel="icon" type="image/svg+xml"
-        href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23203a43"/><path d="M20 44 L32 20 L44 44 Z" fill="%2300ffd5"/></svg>' />
-
-  <!-- Import map (lets us `import "three"` in the browser) -->
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.152.2/build/three.module.js",
-      "three/addons/controls/PointerLockControls.js": "https://unpkg.com/three@0.152.2/examples/jsm/controls/PointerLockControls.js"
-    }
-  }
-  </script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Zoom Tunnel + Pixelation</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <canvas id="bg"></canvas>
+  <!-- Display canvas (shown on screen). We render the scene to an offscreen canvas,
+       then scale it into this one to get true pixelation without blur. -->
+  <canvas id="stage"></canvas>
 
-  <!-- World UI -->
+  <!-- Minimal HUD -->
   <div class="hud">
-    <button id="enter" class="pill">Enter World</button>
-    <div class="hint">W/A/S/D to move • Mouse to look • Click pylons</div>
+    <div class="brand">Your Name</div>
+    <div class="instructions">
+      Scroll = speed • Hold click = boost • Click = pixelation blast • Press P = toggle pixelation mode
+    </div>
   </div>
 
-  <!-- Slide-in panels -->
-  <aside class="panel" id="panel-work" aria-hidden="true">
-    <div class="panel-header">
-      <h2 class="analog">Work</h2>
-      <button class="close" data-close="panel-work" aria-label="Close">✕</button>
-    </div>
-    <div class="panel-content">
-      <article class="card"><h3>Immersive Microsite</h3><p>Scroll-driven story with particles & post FX.</p></article>
-      <article class="card"><h3>Realtime Canvas</h3><p>Audio-reactive shaders, GPU instancing.</p></article>
-      <article class="card"><h3>Brand Playground</h3><p>Physics-based UI experiments and type.</p></article>
-    </div>
-  </aside>
+  <!-- Optional anchors you can wire up later -->
+  <nav class="nav">
+    <a href="#work">Work</a>
+    <a href="#about">About</a>
+    <a href="#contact">Contact</a>
+  </nav>
 
-  <aside class="panel" id="panel-about" aria-hidden="true">
-    <div class="panel-header">
-      <h2 class="analog">About</h2>
-      <button class="close" data-close="panel-about" aria-label="Close">✕</button>
-    </div>
-    <div class="panel-content">
-      <p>I build playful, cinematic web experiences with code, motion, and story.</p>
-      <p class="muted">Stack: Three.js, GLSL, GSAP, WebAudio, React</p>
-    </div>
-  </aside>
-
-  <aside class="panel" id="panel-contact" aria-hidden="true">
-    <div class="panel-header">
-      <h2 class="analog">Contact</h2>
-      <button class="close" data-close="panel-contact" aria-label="Close">✕</button>
-    </div>
-    <div class="panel-content">
-      <p>Email: <a href="mailto:hello@example.com">hello@example.com</a></p>
-      <p>LinkedIn: <a href="#" target="_blank" rel="noopener">/in/your-handle</a></p>
-      <p>GitHub: <a href="#" target="_blank" rel="noopener">github.com/your-handle</a></p>
-    </div>
-  </aside>
-
-  <!-- Module entry -->
-  <script type="module" src="./main.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
