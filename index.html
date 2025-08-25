@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Samuel Goldman — Tie-Dye Particle Space</title>
+<title>Samuel Goldman — Particle Space</title>
 
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,7 +12,7 @@
 
 <style>
   :root{
-    --rail-w: 240px;    /* right menu width */
+    --rail-w: 240px;           /* right menu width */
     --neon:  #00ff88;
   }
   html,body{height:100%;margin:0;background:#000204;overflow:hidden}
@@ -23,10 +23,10 @@
     position:fixed; inset:0 0 0 auto; width:var(--rail-w); z-index:30;
     padding:18px 14px; display:grid; gap:14px; align-content:start;
     background:linear-gradient(180deg,rgba(2,3,5,.95),rgba(2,3,5,.72));
-    border-left:1px solid rgba(0,255,120,.18);
+    border-left:1px solid rgba(0,255,120,.22);
     box-shadow: inset 0 0 40px rgba(0,255,120,.08);
     backdrop-filter: blur(10px);
-    color:#b9ffd7; font:14px/1.5 'Share Tech Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color:#b9ffd7; font:14px/1.5 'Share Tech Mono', ui-monospace, Menlo, Consolas, monospace;
   }
   .brand{
     color:#00ffa6; text-shadow:0 0 8px rgba(0,255,160,.5), 0 0 22px rgba(0,255,130,.25);
@@ -47,9 +47,7 @@
   }
   .vnav button:hover{ transform:translateY(-1px); border-color:rgba(0,255,160,.6); box-shadow: inset 0 0 22px rgba(0,255,160,.2), 0 0 18px rgba(0,255,160,.2) }
   .vnav button.active{ color:#eafff5; border-color:#00ffb3; box-shadow: inset 0 0 26px rgba(0,255,160,.28), 0 0 24px rgba(0,255,160,.28) }
-
   .status{ color:#7dffc0; font-size:12px; opacity:.9; white-space:pre-line; text-shadow:0 0 10px rgba(0,255,160,.25) }
-
   @media(max-width:900px){ :root{ --rail-w: 200px; } }
 </style>
 </head>
@@ -60,13 +58,13 @@
     <div class="divider"></div>
     <div class="vnav">
       <button data-key="start"   class="active">[0]  SAMUEL_GOLDMAN</button>
-      <!-- Welcome removed as a section -->
+      <!-- “Welcome” is a subtitle under the name (not a section) -->
       <button data-key="work">[1]  WORK</button>
       <button data-key="about">[2]  ABOUT</button>
       <button data-key="contact">[3]  CONTACT</button>
     </div>
     <div class="divider"></div>
-    <div class="status" id="status">drag to orbit • titles always face camera • click menu to jump</div>
+    <div class="status">scroll/drag to orbit around the title • title stays fixed • subtle particle motion</div>
   </aside>
 
 <script type="module">
@@ -74,57 +72,54 @@ import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
 
 /* ================= CONFIG ================= */
 const CONFIG = {
-  // Brighter & many more hover particles
-  AMBIENT_COUNT: 80000,     // huge colored cloud
-  SWARM_COUNT:   26000,     // small colorful ring near titles
-  SHAPE_COUNT:   30000,     // dense text
-  BOX: 210,
+  // Dense!
+  AMBIENT_COUNT: 90000,      // full-screen color cloud
+  SWARM_COUNT:   30000,      // ring near titles
+  SHAPE_COUNT:   80000,      // very dense title
+  BOX: 220,
   BASE_SPEED: 0.03,
   DAMPING: 0.985,
 
-  // Camera / orbit
+  // Camera / orbit (camera moves, title stays)
   CAMERA_FOV: 60,
-  ORBIT_RADIUS: 185,
-  ORBIT_DAMP: 0.12,
-  ORBIT_SENS: { theta: 0.008, phi: 0.006 },
-  PHI_MIN: 0.25, PHI_MAX: Math.PI - 0.25,
+  ORBIT_RADIUS: 190,
+  ORBIT_DAMP:  0.12,
+  ORBIT_SENS:  { theta: 0.008, phi: 0.006 },
+  PHI_MIN: 0.35, PHI_MAX: Math.PI - 0.35,
 
-  // Sections (Welcome is now a subtitle of START)
+  // Sections (Welcome is subtitle under Start)
   SECTIONS: ["Samuel Goldman","Work","About","Contact"],
 
-  // Text sampling
-  CANVAS_W: 2800,
-  STEP: 3,
-  THICKNESS: 5,
+  // Text sampling & fit
+  CANVAS_W: 3400,
+  STEP: 2,                    // smaller = denser point sampling
+  THICKNESS: 6,               // title depth jitter
+  SCALE_PAD: 0.86,            // extra safety to avoid clipping
+  TEXT_MARGIN: 0.82,          // global margin (more safety)
 
-  // Morph
-  ATTRACT: 0.022,
-  MORPH_RATE: 0.03,
+  // Sub-title under START
+  SUB_SCALE: 0.50,            // “Welcome” size relative to main
+  SUB_GAP:   0.22,            // gap relative to main height
 
-  // Sizes (brighter/clearer)
-  DOT_TITLE: 0.62,
-  DOT_SWARM: 0.34,
-  DOT_AMBI:  0.32,
+  // Title “life”
+  JITTER_AMP: 0.45,
+  JITTER_SPEED: 1.1,
 
-  // Mouse field
+  // Mouse field (ambient reacts)
   FIELD_RADIUS: 22,
-  FIELD_FORCE: 0.32,
-
-  // Fit & margins (menu on RIGHT)
-  TEXT_MARGIN: 0.90,
-
-  // Start subtitle settings
-  SUB_SCALE: 0.48,          // Welcome size relative to main
-  SUB_GAP:   0.22           // gap relative to main height
+  FIELD_FORCE:  0.32,
 };
 
 /* ================= SCENE ================= */
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x000102, 0.0065);
+scene.fog = new THREE.FogExp2(0x000102, 0.0048);
 
 const camera = new THREE.PerspectiveCamera(CONFIG.CAMERA_FOV, innerWidth/innerHeight, 0.1, 12000);
+
+// pivot = orbit center for camera; we’ll align it to the title position
 const pivot = new THREE.Object3D(); scene.add(pivot);
-const camHolder = new THREE.Object3D(); camHolder.position.set(0,0,CONFIG.ORBIT_RADIUS);
+const camHolder = new THREE.Object3D();
+camHolder.position.set(0,0,CONFIG.ORBIT_RADIUS);
 pivot.add(camHolder); camHolder.add(camera);
 
 const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:"high-performance" });
@@ -132,28 +127,16 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setClearColor(0x000204, 1);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-/* Make particles pop */
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.45;
+renderer.toneMappingExposure = 1.85;
 document.body.appendChild(renderer.domElement);
 
 scene.add(new THREE.AmbientLight(0x0a120f, 1));
 
-/* ================= HELPERS ================= */
-const rnd=(a,b)=>a+Math.random()*(b-a);
-const hsl = (h,s,l)=>{ // [0..1] h,s,l -> [r,g,b]
-  let r,g,b;
-  if(s===0){ r=g=b=l; }
-  else{
-    const hue2rgb = (p,q,t)=>{ if(t<0) t+=1; if(t>1) t-=1; if(t<1/6) return p+(q-p)*6*t; if(t<1/2) return q; if(t<2/3) return p+(q-p)*(2/3-t)*6; return p; };
-    const q = l < 0.5 ? l*(1+s) : l + s - l*s;
-    const p = 2*l - q;
-    r=hue2rgb(p,q,h+1/3); g=hue2rgb(p,q,h); b=hue2rgb(p,q,h-1/3);
-  }
-  return [r,g,b];
-};
+/* Title stage (fixed), will always face the camera */
+const stage = new THREE.Object3D(); scene.add(stage);
 
-/* ================= FRACTAL TIE-DYE BACKGROUND ================= */
+/* ================= TIE-DYE FRACTAL BACKGROUND ================= */
 const nebulaUniforms = { uTime:{value:0}, uHueShift:{value:0.0}, uIntensity:{value:0.55} };
 const nebulaMat = new THREE.ShaderMaterial({
   side: THREE.BackSide, uniforms: nebulaUniforms,
@@ -174,16 +157,16 @@ const nebulaMat = new THREE.ShaderMaterial({
       else if(h<4./6.) rgb=vec3(0.,x,c); else if(h<5./6.) rgb=vec3(x,0.,c); else rgb=vec3(c,0.,x); return rgb + m; }
     void main(){
       vec3 p = normalize(vPos)*2.0;
-      float f = fbm(p*2.0 + vec3(0.,0.,uTime*0.03));
-      float bands = sin((p.x+p.y+p.z)*4.0 + uTime*0.15) * .5 + .5;
+      float f = fbm(p*2.0 + vec3(0.,0.,uTime*0.02));
+      float bands = sin((p.x+p.y+p.z)*4.0 + uTime*0.10) * .5 + .5;
       float hue = fract(bands*0.8 + f*0.3 + uHueShift);
-      vec3 col = hsl2rgb(vec3(hue, 0.85, 0.28 + 0.38*(f)));
+      vec3 col = hsl2rgb(vec3(hue, 0.85, 0.28 + 0.36*(f)));
       col = mix(vec3(0.0), col, uIntensity);
       gl_FragColor = vec4(col, 1.0);
     }`
 });
-const nebula = new THREE.Mesh(new THREE.SphereGeometry(4600,64,64), nebulaMat);
-pivot.add(nebula);
+const nebula = new THREE.Mesh(new THREE.SphereGeometry(5600,64,64), nebulaMat);
+scene.add(nebula);
 
 /* ================= DOT TEXTURE (bright core + glow) ================= */
 function makeDotTexture(size=128){
@@ -191,7 +174,7 @@ function makeDotTexture(size=128){
   const r=size/2, grad=g.createRadialGradient(r,r,0,r,r,r);
   grad.addColorStop(0.00,"rgba(255,255,255,1)");
   grad.addColorStop(0.50,"rgba(255,255,255,1)");
-  grad.addColorStop(0.72,"rgba(120,255,190,.45)");  /* stronger halo */
+  grad.addColorStop(0.76,"rgba(120,255,190,.55)");
   grad.addColorStop(1.00,"rgba(120,255,190,0)");
   g.fillStyle=grad; g.beginPath(); g.arc(r,r,r,0,Math.PI*2); g.fill();
   const tex=new THREE.CanvasTexture(c);
@@ -200,10 +183,17 @@ function makeDotTexture(size=128){
 }
 const dotTex = makeDotTexture();
 
-/* ================= STAGE (titles) ================= */
-const stage = new THREE.Object3D(); pivot.add(stage);
+/* ================= HELPERS ================= */
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const hsl = (h,s,l)=>{
+  let r,g,b; if(s===0){ r=g=b=l; } else {
+    const hue2rgb=(p,q,t)=>{ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p; };
+    const q = l < 0.5 ? l*(1+s) : l + s - l*s; const p = 2*l - q;
+    r=hue2rgb(p,q,h+1/3); g=hue2rgb(p,q,h); b=hue2rgb(p,q,h-1/3);
+  } return [r,g,b];
+};
 
-/* ================= AMBIENT CLOUD (multi-color, brighter, many more) ================= */
+/* ================= AMBIENT CLOUD ================= */
 const ambCount = CONFIG.AMBIENT_COUNT;
 const ambPos = new Float32Array(ambCount*3);
 const ambCol = new Float32Array(ambCount*3);
@@ -212,93 +202,92 @@ for(let i=0;i<ambCount;i++){
   const j=i*3;
   ambPos[j+0]=rnd(-CONFIG.BOX,CONFIG.BOX);
   ambPos[j+1]=rnd(-CONFIG.BOX,CONFIG.BOX);
-  ambPos[j+2]=rnd(-600,600);
+  ambPos[j+2]=rnd(-700,700);
   ambVel[j+0]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   ambVel[j+1]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   ambVel[j+2]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
-  /* brighter hues */
-  const hue = Math.random(); const sat = 0.85 + Math.random()*0.15; const light = 0.60 + Math.random()*0.25;
-  const [r,g,b] = hsl(hue, sat, light);
+  const hue=Math.random(); const [r,g,b]=hsl(hue, 0.95, 0.70+Math.random()*0.20);
   ambCol[j+0]=r; ambCol[j+1]=g; ambCol[j+2]=b;
 }
 const ambGeom = new THREE.BufferGeometry();
 ambGeom.setAttribute("position", new THREE.BufferAttribute(ambPos,3));
-ambGeom.setAttribute("color",   new THREE.BufferAttribute(ambCol,3));
+ambGeom.setAttribute("color",    new THREE.BufferAttribute(ambCol,3));
 const ambMat = new THREE.PointsMaterial({
-  size:CONFIG.DOT_AMBI, map:dotTex, transparent:true, opacity:0.92,
-  depthWrite:false, blending:THREE.AdditiveBlending, vertexColors:true, alphaTest:0.0
+  size:0.34, map:dotTex, transparent:true, opacity:0.98, depthWrite:false,
+  blending:THREE.AdditiveBlending, vertexColors:true
 });
 const ambientPoints = new THREE.Points(ambGeom, ambMat);
 scene.add(ambientPoints);
 
-/* ================= SWARM RING (small, colorful) ================= */
-const swarmCount = CONFIG.SWARM_COUNT;
-const swarmPos = new Float32Array(swarmCount*3);
-const swarmCol = new Float32Array(swarmCount*3);
-const swarmTheta = new Float32Array(swarmCount);
-const swarmRad = new Float32Array(swarmCount);
-const swarmSpeed = new Float32Array(swarmCount);
-const swarmYOff = new Float32Array(swarmCount);
+/* ================= SWARM RING (near titles) ================= */
+const swarmCount=CONFIG.SWARM_COUNT;
+const swarmPos=new Float32Array(swarmCount*3);
+const swarmCol=new Float32Array(swarmCount*3);
+const swarmTheta=new Float32Array(swarmCount);
+const swarmRad=new Float32Array(swarmCount);
+const swarmSpeed=new Float32Array(swarmCount);
+const swarmYOff=new Float32Array(swarmCount);
 for(let i=0;i<swarmCount;i++){
-  const j=i*3;
-  const r = rnd(24, 88), th = rnd(0, Math.PI*2), sp = rnd(0.05, 0.22), yoff = rnd(-18, 18);
+  const j=i*3; const r=rnd(28, 110), th=rnd(0,Math.PI*2), sp=rnd(0.05,0.22), yoff=rnd(-24,24);
   swarmRad[i]=r; swarmTheta[i]=th; swarmSpeed[i]=sp; swarmYOff[i]=yoff;
   swarmPos[j+0]=Math.cos(th)*r; swarmPos[j+1]=yoff; swarmPos[j+2]=Math.sin(th)*r;
-  const hue = Math.random(); const [rC,gC,bC] = hsl(hue, 0.95, 0.68);
-  swarmCol[j+0]=rC; swarmCol[j+1]=gC; swarmCol[j+2]=bC;
+  const hue=Math.random(); const [rc,gc,bc]=hsl(hue, 0.98, 0.72);
+  swarmCol[j+0]=rc; swarmCol[j+1]=gc; swarmCol[j+2]=bc;
 }
-const swarmGeom = new THREE.BufferGeometry();
+const swarmGeom=new THREE.BufferGeometry();
 swarmGeom.setAttribute("position", new THREE.BufferAttribute(swarmPos,3));
 swarmGeom.setAttribute("color",    new THREE.BufferAttribute(swarmCol,3));
-const swarmMat = new THREE.PointsMaterial({
-  size:CONFIG.DOT_SWARM, map:dotTex, transparent:true, opacity:0.95,
-  depthWrite:false, blending:THREE.AdditiveBlending, vertexColors:true, alphaTest:0.0
+const swarmMat=new THREE.PointsMaterial({
+  size:0.34, map:dotTex, transparent:true, opacity:0.98, depthWrite:false,
+  blending:THREE.AdditiveBlending, vertexColors:true
 });
-const swarmPoints = new THREE.Points(swarmGeom, swarmMat);
+const swarmPoints=new THREE.Points(swarmGeom,swarmMat);
 stage.add(swarmPoints);
 
-/* ================= TITLE PARTICLES (dense, tie-dye) ================= */
-const shapeCount = CONFIG.SHAPE_COUNT;
-const pos = new Float32Array(shapeCount*3);
-const vel = new Float32Array(shapeCount*3);
-const col = new Float32Array(shapeCount*3);
+/* ================= TITLE PARTICLES (dense + living jitter) ================= */
+const shapeCount=CONFIG.SHAPE_COUNT;
+const pos=new Float32Array(shapeCount*3);
+const vel=new Float32Array(shapeCount*3);
+const col=new Float32Array(shapeCount*3);
+const targets=new Float32Array(shapeCount*3);
+const phase=new Float32Array(shapeCount);
 for(let i=0;i<shapeCount;i++){
   const j=i*3;
   pos[j+0]=rnd(-CONFIG.BOX*0.5,CONFIG.BOX*0.5);
   pos[j+1]=rnd(-CONFIG.BOX*0.5,CONFIG.BOX*0.5);
-  pos[j+2]=rnd(-40,40);
+  pos[j+2]=rnd(-60,60);
   vel[j+0]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   vel[j+1]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   vel[j+2]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
-  const hue = Math.random(); const [rC,gC,bC] = hsl(hue, 1.0, 0.72); // brighter tie-dye
-  col[j+0]=rC; col[j+1]=gC; col[j+2]=bC;
+  const hue=Math.random(); const [rc,gc,bc]=hsl(hue, 1.0, 0.75);
+  col[j+0]=rc; col[j+1]=gc; col[j+2]=bc;
+  phase[i]=Math.random()*Math.PI*2;
 }
-const shapeGeom = new THREE.BufferGeometry();
+const shapeGeom=new THREE.BufferGeometry();
 shapeGeom.setAttribute("position", new THREE.BufferAttribute(pos,3));
 shapeGeom.setAttribute("color",    new THREE.BufferAttribute(col,3));
-const shapeMat = new THREE.PointsMaterial({
-  size:CONFIG.DOT_TITLE, map:dotTex, transparent:true, opacity:1.0,
-  depthWrite:false, blending:THREE.AdditiveBlending, vertexColors:true, alphaTest:0.0
+const shapeMat=new THREE.PointsMaterial({
+  size:0.56, map:dotTex, transparent:true, opacity:1.0, depthWrite:false,
+  blending:THREE.AdditiveBlending, vertexColors:true
 });
-const shapePoints = new THREE.Points(shapeGeom, shapeMat);
+const shapePoints=new THREE.Points(shapeGeom,shapeMat);
 stage.add(shapePoints);
-const targets = new Float32Array(shapeCount*3);
-const morphState = { progress:1 };
+const morphState={progress:1};
 
-/* ================= FIT HELPERS (menu on RIGHT) ================= */
-function frustumWorldWidth(){ const f=THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV); return 2*CONFIG.ORBIT_RADIUS*Math.tan(f/2)*(innerWidth/innerHeight); }
-function frustumWorldHeight(){ const f=THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV); return 2*CONFIG.ORBIT_RADIUS*Math.tan(f/2); }
+/* ================= RIGHT-RAIL SAFE FIT (NO CLIP) ================= */
+function planeWorldWidth(){ const f=THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV); return 2*CONFIG.ORBIT_RADIUS*Math.tan(f/2)*(innerWidth/innerHeight); }
+function planeWorldHeight(){ const f=THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV); return 2*CONFIG.ORBIT_RADIUS*Math.tan(f/2); }
 function safeArea(){
-  const railPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rail-w')) || 240;
-  const worldPerPx = frustumWorldWidth() / innerWidth;
-  const railW = railPx * worldPerPx;
-  const W = frustumWorldWidth()  - railW * 2.1;      // extra margin for right rail
-  const H = frustumWorldHeight() * 0.78;
-  const centerX = -railW * 1.0;                      // shift LEFT away from right rail
+  const railPx=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rail-w'))||240;
+  const worldPerPx=planeWorldWidth()/innerWidth;     // width on the z=0 plane per screen pixel
+  const railW=railPx*worldPerPx;                     // rail width in world units
+  const W=planeWorldWidth()  - railW*2.4;            // generous margin for the rail
+  const H=planeWorldHeight() * 0.80;                 // generous vertical padding
+  const centerX = -railW*1.15;                       // push left away from right rail
   return { safeW: Math.max(28,W)*CONFIG.TEXT_MARGIN, safeH: Math.max(12,H)*CONFIG.TEXT_MARGIN, centerX };
 }
 
-/* ================= TEXT SAMPLING ================= */
+/* ================= TEXT SAMPLING (accurate bounds + dense points) ================= */
 function sampleText(text){
   const W=CONFIG.CANVAS_W, H=Math.round(W*0.22);
   const cnv=document.createElement("canvas"); cnv.width=W; cnv.height=H;
@@ -310,123 +299,131 @@ function sampleText(text){
   ctx.fillText(text, W/2, H/2);
   const img=ctx.getImageData(0,0,W,H).data;
 
-  const step=CONFIG.STEP, pts=[];
-  const aAt=(x,y)=>img[(y*W+x)*4+3];
-  let xmin=1e9,xmax=-1e9,ymin=1e9,ymax=-1e9;
-  for(let y=step;y<H-step;y+=step){
-    for(let x=step;x<W-step;x+=step){
-      if(aAt(x,y)>128){ pts.push([x,y]); if(x<xmin)xmin=x; if(x>xmax)xmax=x; if(y<ymin)ymin=y; if(y>ymax)ymax=y; }
+  // Accurate bounds at step=1 (prevents optimistic fit)
+  let xmin=W, xmax=0, ymin=H, ymax=0;
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      if(img[(y*W+x)*4+3]>0){ if(x<xmin)xmin=x; if(x>xmax)xmax=x; if(y<ymin)ymin=y; if(y>ymax)ymax=y; }
     }
   }
+  if(xmin>xmax || ymin>ymax){ xmin=0; xmax=W; ymin=0; ymax=H; }
+
   const cx=(xmin+xmax)/2, cy=(ymin+ymax)/2;
   const wNorm=(xmax-xmin)/W, hNorm=(ymax-ymin)/W;
+
+  // Dense point sampling using CONFIG.STEP
+  const pts=[]; const step=CONFIG.STEP;
+  for(let y=ymin;y<=ymax;y+=step){
+    for(let x=xmin;x<=xmax;x+=step){
+      if(img[(y*W+x)*4+3]>128) pts.push([x,y]);
+    }
+  }
   const normPts = pts.map(([x,y])=>[(x-cx)/W, (cy-y)/W]);
   return { normPts, wNorm:Math.max(wNorm,1e-4), hNorm:Math.max(hNorm,1e-4) };
 }
 
-/* Precompute glyph point clouds */
-const NORM = {};
-const SECT = { START:0, WORK:1, ABOUT:2, CONTACT:3 };
-let section = SECT.START;
+const NORM={};
+const SECT={ START:0, WORK:1, ABOUT:2, CONTACT:3 };
+let section=SECT.START;
 
 async function prepareText(){
   try{ await document.fonts.load('900 120px "Orbitron"'); await document.fonts.ready; }catch(e){}
   NORM.main = sampleText("Samuel Goldman");
-  NORM.sub  = sampleText("Welcome");     // subtitle for START only
+  NORM.sub  = sampleText("Welcome");
   NORM.work = sampleText("Work");
   NORM.about= sampleText("About");
   NORM.contact=sampleText("Contact");
   assignTargetsFor(section);
-  setTimeout(()=>{ // second pass just in case font finishes a bit later
+  // second pass in case font metrics settle slightly later
+  setTimeout(()=>{
     NORM.main = sampleText("Samuel Goldman");
     NORM.sub  = sampleText("Welcome");
     NORM.work = sampleText("Work");
     NORM.about= sampleText("About");
     NORM.contact=sampleText("Contact");
     assignTargetsFor(section);
-  }, 400);
+  }, 350);
 }
 
-/* Assign targets; START = main + subtitle stacked */
 function assignTargetsFor(idx){
   const { safeW, safeH, centerX } = safeArea();
-  pivot.position.x = centerX;
 
-  let pool = [];
+  // Put the title where it safely clears the right rail
+  stage.position.set(centerX, 0, 0);
+
+  // VERY IMPORTANT: orbit pivot = title position → camera orbits the title center
+  pivot.position.copy(stage.position);
+
+  let pool=[];
   if(idx===SECT.START){
-    const M=NORM.main, S=NORM.sub;
-    if(!M || !S) return;
+    const M=NORM.main, S=NORM.sub; if(!M||!S) return;
+    const subRel=CONFIG.SUB_SCALE;
+    const combinedW=Math.max(M.wNorm, S.wNorm*subRel);
+    const combinedH = M.hNorm + (M.hNorm*CONFIG.SUB_GAP) + (S.hNorm*subRel);
+    const baseScale=Math.min(safeW/combinedW, safeH/combinedH);
+    const scale=CONFIG.SCALE_PAD*baseScale;
 
-    // Compute combined scaling so BOTH lines fit (width and height)
-    const subScaleRel = CONFIG.SUB_SCALE;
-    const combinedW = Math.max(M.wNorm, S.wNorm*subScaleRel);
-    const combinedHNorm = M.hNorm + (M.hNorm*CONFIG.SUB_GAP) + (S.hNorm*subScaleRel);
-    const scale = Math.min(safeW/combinedW, safeH/combinedHNorm);
+    const mainScale=scale, subScale=scale*subRel;
+    const mainH=M.hNorm*mainScale, subH=S.hNorm*subScale, gap=M.hNorm*CONFIG.SUB_GAP*scale;
+    const mainY=(subH+gap)/2, subY=-(mainH+gap)/2;
+    const jit=CONFIG.THICKNESS*2;
 
-    const mainScale = scale;
-    const subScale  = scale*subScaleRel;
-
-    const mainH = M.hNorm*mainScale;
-    const subH  = S.hNorm*subScale;
-    const gap   = M.hNorm*CONFIG.SUB_GAP*scale;
-
-    // Center the group vertically around 0
-    const mainY = (subH + gap)/2;
-    const subY  = -(mainH + gap)/2;
-
-    // Map points into world
-    const jitter = CONFIG.THICKNESS*2;
-    for(const t of M.normPts){
-      pool.push([ t[0]*mainScale, t[1]*mainScale + mainY, (Math.random()-0.5)*jitter ]);
-    }
-    for(const t of S.normPts){
-      pool.push([ t[0]*subScale,  t[1]*subScale  + subY,  (Math.random()-0.5)*jitter ]);
-    }
-  } else {
-    const map = [null, NORM.work, NORM.about, NORM.contact];
-    const D = map[idx]; if(!D) return;
-    const scale = Math.min(safeW / D.wNorm, safeH / D.hNorm);
-    const jitter = CONFIG.THICKNESS*2;
-    for(const t of D.normPts){
-      pool.push([ t[0]*scale, t[1]*scale, (Math.random()-0.5)*jitter ]);
-    }
+    for(const t of M.normPts){ pool.push([t[0]*mainScale, t[1]*mainScale + mainY, (Math.random()-0.5)*jit]); }
+    for(const t of S.normPts){ pool.push([t[0]*subScale,  t[1]*subScale  + subY,  (Math.random()-0.5)*jit]); }
+  }else{
+    const MAP=[null,NORM.work,NORM.about,NORM.contact];
+    const D=MAP[idx]; if(!D) return;
+    const baseScale=Math.min(safeW/D.wNorm, safeH/D.hNorm);
+    const scale=CONFIG.SCALE_PAD*baseScale;
+    const jit=CONFIG.THICKNESS*2;
+    for(const t of D.normPts){ pool.push([t[0]*scale, t[1]*scale, (Math.random()-0.5)*jit]); }
   }
 
-  // Fill targets from pool
+  // Assign targets (with replacement) from the pool
   for(let i=0;i<shapeCount;i++){
-    const pick = pool[(Math.random()*pool.length)|0];
-    const j=i*3;
-    targets[j+0]=pick[0];
-    targets[j+1]=pick[1];
-    targets[j+2]=pick[2];
+    const p=pool[(Math.random()*pool.length)|0], j=i*3;
+    targets[j+0]=p[0]; targets[j+1]=p[1]; targets[j+2]=p[2];
   }
-  morphState.progress = 0;
+  morphState.progress=0;
 }
 
-/* ================= ORBIT (360° drag) ================= */
+/* ================= CAMERA ORBIT (scroll/drag; title stays) ================= */
 let theta=0, phi=Math.PI/2, tTheta=0, tPhi=Math.PI/2, dragging=false, lastX=0, lastY=0;
 function updateCamera(){
   theta += (tTheta - theta) * CONFIG.ORBIT_DAMP;
   phi   += (tPhi   - phi)   * CONFIG.ORBIT_DAMP;
   const r=CONFIG.ORBIT_RADIUS;
   const x=r*Math.sin(phi)*Math.sin(theta), y=r*Math.cos(phi), z=r*Math.sin(phi)*Math.cos(theta);
-  camHolder.position.set(x,y,z); camera.lookAt(pivot.position);
-  stage.quaternion.copy(camera.quaternion); // keep titles readable
-  nebulaUniforms.uHueShift.value = (theta/ (Math.PI*2)) % 1.0; // different tie-dye scenes as you rotate
+  camHolder.position.set(x,y,z);
+  camera.lookAt(stage.position);
+  // Title always faces camera (readable, doesn’t move)
+  stage.quaternion.copy(camera.quaternion);
+  // Reveal different tie-dye scenes as you orbit
+  nebulaUniforms.uHueShift.value = (theta/(Math.PI*2)) % 1.0;
 }
-addEventListener("pointerdown",(e)=>{ if(e.target.closest('.rail')) return; dragging=true; lastX=e.clientX; lastY=e.clientY; });
-addEventListener("pointermove",(e)=>{ if(!dragging) return; const dx=e.clientX-lastX, dy=e.clientY-lastY; tTheta -= dx*CONFIG.ORBIT_SENS.theta; tPhi -= dy*CONFIG.ORBIT_SENS.phi; tPhi = THREE.MathUtils.clamp(tPhi, CONFIG.PHI_MIN, CONFIG.PHI_MAX); lastX=e.clientX; lastY=e.clientY; });
-addEventListener("pointerup",()=>{ dragging=false; });
-addEventListener("wheel", e=>e.preventDefault(), { passive:false });
+addEventListener('wheel', (e)=>{
+  e.preventDefault();
+  tTheta -= e.deltaY * 0.0018;           // horizontal orbit
+  if(e.shiftKey){ tPhi -= e.deltaY * 0.0012; tPhi = THREE.MathUtils.clamp(tPhi, CONFIG.PHI_MIN, CONFIG.PHI_MAX); }
+}, { passive:false });
+addEventListener('pointerdown',(e)=>{ if(e.target.closest('.rail')) return; dragging=true; lastX=e.clientX; lastY=e.clientY; });
+addEventListener('pointermove',(e)=>{ if(!dragging) return; const dx=e.clientX-lastX, dy=e.clientY-lastY; tTheta -= dx*CONFIG.ORBIT_SENS.theta; tPhi -= dy*CONFIG.ORBIT_SENS.phi; tPhi = THREE.MathUtils.clamp(tPhi, CONFIG.PHI_MIN, CONFIG.PHI_MAX); lastX=e.clientX; lastY=e.clientY; });
+addEventListener('pointerup',()=>{ dragging=false; });
 
-/* ================= MOUSE FIELD (ambient reacts) ================= */
-const raycaster=new THREE.Raycaster(); let mouseNDC=new THREE.Vector2(); let fieldPos=new THREE.Vector3(0,0,0);
+/* ================= MOUSE FIELD (ambient reacts on title plane) ================= */
+const raycaster=new THREE.Raycaster();
+let mouseNDC=new THREE.Vector2();
+let fieldPos=new THREE.Vector3();
 addEventListener("pointermove",(e)=>{ const r=renderer.domElement.getBoundingClientRect(); mouseNDC.x=((e.clientX-r.left)/r.width)*2-1; mouseNDC.y=-((e.clientY-r.top)/r.height)*2+1; });
-function updateMouseField(){ const plane=new THREE.Plane(), dir=new THREE.Vector3(); camera.getWorldDirection(dir); plane.setFromNormalAndCoplanarPoint(dir, pivot.position); raycaster.setFromCamera(mouseNDC, camera); raycaster.ray.intersectPlane(plane, fieldPos); }
+function updateMouseField(){
+  const dir=new THREE.Vector3(); camera.getWorldDirection(dir);
+  const plane=new THREE.Plane().setFromNormalAndCoplanarPoint(dir, stage.position);
+  raycaster.setFromCamera(mouseNDC, camera); raycaster.ray.intersectPlane(plane, fieldPos);
+}
 
 /* ================= NAV (right menu) ================= */
 function setSection(to){
-  section = to;
+  section=to;
   const keys=["start","work","about","contact"];
   document.querySelectorAll('.vnav button').forEach(b=>b.classList.toggle('active', b.dataset.key===keys[section]));
   assignTargetsFor(section);
@@ -434,9 +431,9 @@ function setSection(to){
 document.querySelectorAll('.vnav button').forEach(btn=>{
   btn.addEventListener('click', ()=> setSection({start:0,work:1,about:2,contact:3}[btn.dataset.key]));
 });
-addEventListener("keydown",(e)=>{
-  if(e.key==="ArrowRight" || e.key==="PageDown") setSection(Math.min(3, section+1));
-  if(e.key==="ArrowLeft"  || e.key==="PageUp")   setSection(Math.max(0, section-1));
+addEventListener('keydown',(e)=>{
+  if(e.key==='ArrowRight'||e.key==='PageDown') setSection(Math.min(3, section+1));
+  if(e.key==='ArrowLeft' ||e.key==='PageUp')   setSection(Math.max(0, section-1));
 });
 
 /* ================= ANIMATE ================= */
@@ -448,31 +445,28 @@ const clock=new THREE.Clock();
 function animate(){
   requestAnimationFrame(animate);
   const dt=Math.min(0.05, clock.getDelta());
-  nebulaUniforms.uTime.value += dt;
+  nebulaUniforms.uTime.value += dt;        // slow background drift
 
   updateCamera(); updateMouseField();
 
-  // Ambient (brighter, dense)
+  // Ambient motion + mouse influence + toroidal wrap
   const r2=CONFIG.FIELD_RADIUS*CONFIG.FIELD_RADIUS;
   for(let i=0;i<ambCount;i++){
     const j=i*3;
-    // random walk
     ambVel[j+0]=ambVel[j+0]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
     ambVel[j+1]=ambVel[j+1]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
     ambVel[j+2]=ambVel[j+2]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
-    // push from mouse field
     const dx=ambPos[j+0]-fieldPos.x, dy=ambPos[j+1]-fieldPos.y, dz=ambPos[j+2]-fieldPos.z;
     const d2=dx*dx+dy*dy+dz*dz; if(d2<r2){ const f=(1-d2/r2)*CONFIG.FIELD_FORCE; ambVel[j+0]+=dx*f*dt*30; ambVel[j+1]+=dy*f*dt*30; ambVel[j+2]+=dz*f*dt*30; }
-    // integrate + wrap
     ambPos[j+0]+=ambVel[j+0]; ambPos[j+1]+=ambVel[j+1]; ambPos[j+2]+=ambVel[j+2];
-    const B=CONFIG.BOX, Zmin=-600, Zmax=600;
+    const B=CONFIG.BOX, Zmin=-700, Zmax=700;
     if(ambPos[j+0]<-B) ambPos[j+0]+=2*B; else if(ambPos[j+0]>B) ambPos[j+0]-=2*B;
     if(ambPos[j+1]<-B) ambPos[j+1]+=2*B; else if(ambPos[j+1]>B) ambPos[j+1]-=2*B;
     if(ambPos[j+2]<Zmin) ambPos[j+2]=Zmax; else if(ambPos[j+2]>Zmax) ambPos[j+2]=Zmin;
   }
-  ambPosAttr.needsUpdate = true;
+  ambPosAttr.needsUpdate=true;
 
-  // Swarm ring
+  // Swarm ring wave
   for(let i=0;i<swarmCount;i++){
     const j=i*3; swarmTheta[i]+=swarmSpeed[i]*0.01;
     const r = swarmRad[i]*(1.0+0.06*Math.sin(swarmTheta[i]*1.7+i*0.13));
@@ -480,19 +474,26 @@ function animate(){
     swarmPos[j+1]=swarmYOff[i]*(1.0 + 0.25*Math.sin(swarmTheta[i]*0.7 + i*0.09));
     swarmPos[j+2]=Math.sin(swarmTheta[i])*r*0.7;
   }
-  swarmPosAttr.needsUpdate = true;
+  swarmPosAttr.needsUpdate=true;
 
-  // Morph to current title
+  // Morph to current title + subtle “living” jitter
+  const t = performance.now()*0.001*CONFIG.JITTER_SPEED;
   if(morphState.progress<1) morphState.progress=Math.min(1, morphState.progress+CONFIG.MORPH_RATE);
   for(let i=0;i<shapeCount;i++){
-    const j=i*3, m=morphState.progress;
-    vel[j+0]=vel[j+0]*CONFIG.DAMPING+(targets[j+0]-pos[j+0])*CONFIG.ATTRACT*m;
-    vel[j+1]=vel[j+1]*CONFIG.DAMPING+(targets[j+1]-pos[j+1])*CONFIG.ATTRACT*m;
-    vel[j+2]=vel[j+2]*CONFIG.DAMPING+(targets[j+2]-pos[j+2])*CONFIG.ATTRACT*m;
+    const j=i*3, m=morphState.progress, ph=phase[i];
+    const jx = Math.sin(t + ph*1.17) * CONFIG.JITTER_AMP;
+    const jy = Math.cos(t*0.9 + ph*1.07) * CONFIG.JITTER_AMP;
+    const jz = Math.sin(t*1.3 + ph*0.73) * CONFIG.JITTER_AMP*0.6;
+    const bx = targets[j+0] + jx;
+    const by = targets[j+1] + jy;
+    const bz = targets[j+2] + jz;
+    vel[j+0]=vel[j+0]*CONFIG.DAMPING + (bx - pos[j+0])*CONFIG.ATTRACT*m;
+    vel[j+1]=vel[j+1]*CONFIG.DAMPING + (by - pos[j+1])*CONFIG.ATTRACT*m;
+    vel[j+2]=vel[j+2]*CONFIG.DAMPING + (bz - pos[j+2])*CONFIG.ATTRACT*m;
     if(m===1){ vel[j+0]*=0.94; vel[j+1]*=0.94; vel[j+2]*=0.94; }
     pos[j+0]+=vel[j+0]; pos[j+1]+=vel[j+1]; pos[j+2]+=vel[j+2];
   }
-  shapePosAttr.needsUpdate = true;
+  shapePosAttr.needsUpdate=true;
 
   renderer.render(scene,camera);
 }
@@ -500,9 +501,9 @@ animate();
 
 /* ================= INIT TEXT & RESIZE ================= */
 prepareText();
-addEventListener("resize", ()=>{
+addEventListener("resize",()=>{
   camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
+  renderer.setSize(innerWidth,innerHeight);
   assignTargetsFor(section);
 });
 </script>
