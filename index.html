@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Samuel Goldman — Particle Space</title>
 
+<!-- Favicon (prevents 404) -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='28' fill='%2300ff88'/></svg>">
+
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -72,29 +75,26 @@ import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
 
 /* ================= CONFIG ================= */
 const CONFIG = {
-  // Dense!
-  AMBIENT_COUNT: 90000,      // full-screen color cloud
+  // Dense clouds & titles
+  AMBIENT_COUNT: 80000,      // colorful ambient cloud (performance-friendly but dense)
   SWARM_COUNT:   30000,      // ring near titles
-  SHAPE_COUNT:   100000,     // even denser title
+  SHAPE_COUNT:   100000,     // very dense title fill
   BOX: 220,
   BASE_SPEED: 0.03,
   DAMPING: 0.985,
 
   // Camera / orbit (camera moves, title stays)
   CAMERA_FOV: 60,
-  ORBIT_RADIUS: 210,         // slightly farther to guarantee fit
+  ORBIT_RADIUS: 220,         // slightly farther to guarantee fit
   ORBIT_DAMP:  0.12,
   ORBIT_SENS:  { theta: 0.008, phi: 0.006 },
   PHI_MIN: 0.35, PHI_MAX: Math.PI - 0.35,
 
-  // Sections (Welcome is subtitle under Start)
-  SECTIONS: ["Samuel Goldman","Work","About","Contact"],
-
   // Text sampling & fit
   CANVAS_W: 3600,
-  STEP: 2,                    // sampling step (dense)
-  THICKNESS: 6,               // title depth jitter
-  SCALE_PAD: 0.82,            // bigger safety pad (no clipping)
+  STEP: 2,                    // 1 = ultra dense, 2 = very dense (good perf)
+  THICKNESS: 6,               // depth jitter
+  SCALE_PAD: 0.80,            // stronger safety (no clipping)
   TEXT_MARGIN: 0.78,          // more margin (no clipping)
 
   // Sub-title under START
@@ -114,9 +114,9 @@ const CONFIG = {
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x000102, 0.0048);
 
-const camera = new THREE.PerspectiveCamera(CONFIG.CAMERA_FOV, innerWidth/innerHeight, 0.1, 12000);
+const camera = new THREE.PerspectiveCamera(CONFIG.CAMERA_FOV, Math.max(innerWidth,1)/Math.max(innerHeight,1), 0.1, 12000);
 
-// pivot = orbit center for camera; we’ll align it to the title position
+// pivot = orbit center for camera; will be aligned to the title position
 const pivot = new THREE.Object3D(); scene.add(pivot);
 const camHolder = new THREE.Object3D();
 camHolder.position.set(0,0,CONFIG.ORBIT_RADIUS);
@@ -220,7 +220,7 @@ const ambientPoints = new THREE.Points(ambGeom, ambMat);
 scene.add(ambientPoints);
 
 /* ================= SWARM RING (near titles) ================= */
-const swarmCount=CONFIG.SWARM_COUNT;
+const swarmCount=30000;
 const swarmPos=new Float32Array(swarmCount*3);
 const swarmCol=new Float32Array(swarmCount*3);
 const swarmTheta=new Float32Array(swarmCount);
@@ -275,15 +275,24 @@ stage.add(shapePoints);
 const morphState={progress:1};
 
 /* ================= RIGHT-RAIL SAFE FIT (NO CLIP) ================= */
-function planeWorldWidth(){ const f=THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV); return 2*CONFIG.ORBIT_RADIUS*Math.tan(f/2)*(innerWidth/innerHeight); }
-function planeWorldHeight(){ const f=THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV); return 2*CONFIG.ORBIT_RADIUS*Math.tan(f/2); }
+function planeWorldWidth(){
+  const h = Math.max(innerHeight, 1);
+  const w = Math.max(innerWidth, 1);
+  const f = THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV);
+  return 2*CONFIG.ORBIT_RADIUS*Math.tan(f/2)*(w/h);
+}
+function planeWorldHeight(){
+  const h = Math.max(innerHeight, 1);
+  const f = THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV);
+  return 2*CONFIG.ORBIT_RADIUS*Math.tan(f/2);
+}
 function safeArea(){
   const railPx=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rail-w'))||240;
-  const worldPerPx=planeWorldWidth()/innerWidth;     // width on the z=0 plane per screen pixel
-  const railW=railPx*worldPerPx;                     // rail width in world units
-  const W=planeWorldWidth()  - railW*2.6;            // even more margin for the rail
-  const H=planeWorldHeight() * 0.78;                 // generous vertical padding
-  const centerX = -railW*1.2;                        // push left away from right rail
+  const worldPerPx=planeWorldWidth()/Math.max(innerWidth,1);
+  const railW=railPx*worldPerPx;
+  const W=planeWorldWidth()  - railW*2.6;    // wide margin near the rail
+  const H=planeWorldHeight() * 0.78;         // generous vertical padding
+  const centerX = -railW*1.2;                // position left of rail
   return { safeW: Math.max(28,W)*CONFIG.TEXT_MARGIN, safeH: Math.max(12,H)*CONFIG.TEXT_MARGIN, centerX };
 }
 
@@ -299,27 +308,34 @@ function sampleText(text){
   ctx.fillText(text, W/2, H/2);
   const img=ctx.getImageData(0,0,W,H).data;
 
-  // Accurate bounds at step=1 (prevents optimistic fit)
+  // Accurate bounds @ step=1
   let xmin=W, xmax=0, ymin=H, ymax=0;
   for(let y=0;y<H;y++){
     for(let x=0;x<W;x++){
       if(img[(y*W+x)*4+3]>0){ if(x<xmin)xmin=x; if(x>xmax)xmax=x; if(y<ymin)ymin=y; if(y>ymax)ymax=y; }
     }
   }
-  if(xmin>xmax || ymin>ymax){ xmin=0; xmax=W; ymin=0; ymax=H; }
+  // fallback if draw failed
+  if(xmin>xmax || ymin>ymax){ xmin=W*0.4; xmax=W*0.6; ymin=H*0.4; ymax=H*0.6; }
 
   const cx=(xmin+xmax)/2, cy=(ymin+ymax)/2;
-  const wNorm=(xmax-xmin)/W, hNorm=(ymax-ymin)/W;
+  const wNorm=Math.max((xmax-xmin)/W, 1e-4), hNorm=Math.max((ymax-ymin)/W, 1e-4);
 
-  // Dense point sampling using CONFIG.STEP
-  const pts=[]; const step=CONFIG.STEP;
+  const pts=[]; const step=Math.max(1, CONFIG.STEP|0);
   for(let y=ymin;y<=ymax;y+=step){
     for(let x=xmin;x<=xmax;x+=step){
       if(img[(y*W+x)*4+3]>128) pts.push([x,y]);
     }
   }
+  // ensure non-empty pool
+  if(pts.length===0){
+    for(let i=0;i<2000;i++){
+      pts.push([xmin + Math.random()*(xmax-xmin), ymin + Math.random()*(ymax-ymin)]);
+    }
+  }
+
   const normPts = pts.map(([x,y])=>[(x-cx)/W, (cy-y)/W]);
-  return { normPts, wNorm:Math.max(wNorm,1e-4), hNorm:Math.max(hNorm,1e-4) };
+  return { normPts, wNorm, hNorm };
 }
 
 const NORM={};
@@ -327,7 +343,12 @@ const SECT={ START:0, WORK:1, ABOUT:2, CONTACT:3 };
 let section=SECT.START;
 
 async function prepareText(){
-  try{ await document.fonts.load('900 120px "Orbitron"'); await document.fonts.ready; }catch(e){}
+  try{
+    if (document.fonts && document.fonts.load) {
+      await document.fonts.load('900 120px "Orbitron"');
+      await document.fonts.ready;
+    }
+  }catch(e){}
   NORM.main = sampleText("Samuel Goldman");
   NORM.sub  = sampleText("Welcome");
   NORM.work = sampleText("Work");
@@ -348,10 +369,10 @@ async function prepareText(){
 function assignTargetsFor(idx){
   const { safeW, safeH, centerX } = safeArea();
 
-  // Put the title where it safely clears the right rail
+  // Place title safely left of the rail
   stage.position.set(centerX, 0, 0);
 
-  // IMPORTANT: orbit pivot = title position → camera orbits the title center
+  // CRITICAL: orbit pivot follows title → camera orbits the title center
   pivot.position.copy(stage.position);
 
   let pool=[];
@@ -379,10 +400,21 @@ function assignTargetsFor(idx){
     for(const t of D.normPts){ pool.push([t[0]*scale, t[1]*scale, (Math.random()-0.5)*jit]); }
   }
 
-  // Assign targets (with replacement) from the pool
+  // Guard: if pool is empty, seed a tiny cluster at origin
+  if (!pool || pool.length === 0) {
+    const jit = CONFIG.THICKNESS*2;
+    for (let i=0;i<2000;i++){
+      pool.push([(Math.random()-0.5)*4, (Math.random()-0.5)*1.6, (Math.random()-0.5)*jit]);
+    }
+  }
+
+  // Assign targets (with replacement) from pool (NaN-safe)
   for(let i=0;i<shapeCount;i++){
-    const p=pool[(Math.random()*pool.length)|0], j=i*3;
-    targets[j+0]=p[0]; targets[j+1]=p[1]; targets[j+2]=p[2];
+    const j=i*3;
+    const p = pool[(Math.random()*pool.length|0)] || [0,0,0];
+    targets[j+0]=Number.isFinite(p[0]) ? p[0] : 0;
+    targets[j+1]=Number.isFinite(p[1]) ? p[1] : 0;
+    targets[j+2]=Number.isFinite(p[2]) ? p[2] : 0;
   }
   morphState.progress=0;
 }
@@ -418,7 +450,9 @@ addEventListener("pointermove",(e)=>{ const r=renderer.domElement.getBoundingCli
 function updateMouseField(){
   const dir=new THREE.Vector3(); camera.getWorldDirection(dir);
   const plane=new THREE.Plane().setFromNormalAndCoplanarPoint(dir, stage.position);
-  raycaster.setFromCamera(mouseNDC, camera); raycaster.ray.intersectPlane(plane, fieldPos);
+  raycaster.setFromCamera(mouseNDC, camera);
+  const out = raycaster.ray.intersectPlane(plane, fieldPos);
+  if(!out){ fieldPos.copy(stage.position); } // guard if no intersection
 }
 
 /* ================= NAV (right menu) ================= */
@@ -449,7 +483,7 @@ function animate(){
 
   updateCamera(); updateMouseField();
 
-  // Ambient motion + mouse influence + toroidal wrap
+  // Ambient motion + mouse influence + toroidal wrap + NaN guard
   const r2=CONFIG.FIELD_RADIUS*CONFIG.FIELD_RADIUS;
   for(let i=0;i<ambCount;i++){
     const j=i*3;
@@ -463,22 +497,24 @@ function animate(){
     if(ambPos[j+0]<-B) ambPos[j+0]+=2*B; else if(ambPos[j+0]>B) ambPos[j+0]-=2*B;
     if(ambPos[j+1]<-B) ambPos[j+1]+=2*B; else if(ambPos[j+1]>B) ambPos[j+1]-=2*B;
     if(ambPos[j+2]<Zmin) ambPos[j+2]=Zmax; else if(ambPos[j+2]>Zmax) ambPos[j+2]=Zmin;
+    if(!Number.isFinite(ambPos[j+0])||!Number.isFinite(ambPos[j+1])||!Number.isFinite(ambPos[j+2])){ ambPos[j+0]=0;ambPos[j+1]=0;ambPos[j+2]=0; ambVel[j+0]=ambVel[j+1]=ambVel[j+2]=0; }
   }
   ambPosAttr.needsUpdate=true;
 
-  // Swarm ring wave
+  // Swarm ring wave + NaN guard
   for(let i=0;i<swarmCount;i++){
     const j=i*3; swarmTheta[i]+=swarmSpeed[i]*0.01;
     const r = swarmRad[i]*(1.0+0.06*Math.sin(swarmTheta[i]*1.7+i*0.13));
     swarmPos[j+0]=Math.cos(swarmTheta[i])*r;
     swarmPos[j+1]=swarmYOff[i]*(1.0 + 0.25*Math.sin(swarmTheta[i]*0.7 + i*0.09));
     swarmPos[j+2]=Math.sin(swarmTheta[i])*r*0.7;
+    if(!Number.isFinite(swarmPos[j+0])||!Number.isFinite(swarmPos[j+1])||!Number.isFinite(swarmPos[j+2])){ swarmPos[j+0]=0;swarmPos[j+1]=0;swarmPos[j+2]=0; }
   }
   swarmPosAttr.needsUpdate=true;
 
-  // Morph to current title + subtle “living” jitter
+  // Morph to current title + subtle “living” jitter + NaN guard
   const t = performance.now()*0.001*CONFIG.JITTER_SPEED;
-  if(morphState.progress<1) morphState.progress=Math.min(1, morphState.progress+CONFIG.MORPH_RATE);
+  if(morphState.progress<1) morphState.progress=Math.min(1, morphState.progress+0.04);
   for(let i=0;i<shapeCount;i++){
     const j=i*3, m=morphState.progress, ph=phase[i];
     const jx = Math.sin(t + ph*1.17) * CONFIG.JITTER_AMP;
@@ -487,11 +523,12 @@ function animate(){
     const bx = targets[j+0] + jx;
     const by = targets[j+1] + jy;
     const bz = targets[j+2] + jz;
-    vel[j+0]=vel[j+0]*CONFIG.DAMPING + (bx - pos[j+0])*CONFIG.ATTRACT*m;
-    vel[j+1]=vel[j+1]*CONFIG.DAMPING + (by - pos[j+1])*CONFIG.ATTRACT*m;
-    vel[j+2]=vel[j+2]*CONFIG.DAMPING + (bz - pos[j+2])*CONFIG.ATTRACT*m;
+    vel[j+0]=vel[j+0]*CONFIG.DAMPING + (bx - pos[j+0])*0.022*m;
+    vel[j+1]=vel[j+1]*CONFIG.DAMPING + (by - pos[j+1])*0.022*m;
+    vel[j+2]=vel[j+2]*CONFIG.DAMPING + (bz - pos[j+2])*0.022*m;
     if(m===1){ vel[j+0]*=0.94; vel[j+1]*=0.94; vel[j+2]*=0.94; }
     pos[j+0]+=vel[j+0]; pos[j+1]+=vel[j+1]; pos[j+2]+=vel[j+2];
+    if(!Number.isFinite(pos[j+0])||!Number.isFinite(pos[j+1])||!Number.isFinite(pos[j+2])){ pos[j+0]=0;pos[j+1]=0;pos[j+2]=0; vel[j+0]=vel[j+1]=vel[j+2]=0; }
   }
   shapePosAttr.needsUpdate=true;
 
@@ -502,7 +539,8 @@ animate();
 /* ================= INIT TEXT & RESIZE ================= */
 prepareText();
 addEventListener("resize",()=>{
-  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  camera.aspect=Math.max(innerWidth,1)/Math.max(innerHeight,1);
+  camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
   assignTargetsFor(section);
 });
