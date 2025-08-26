@@ -61,13 +61,12 @@
     <div class="divider"></div>
     <div class="vnav">
       <button data-key="start"   class="active">[0]  SAMUEL_GOLDMAN</button>
-      <!-- “Welcome” is a subtitle under the name (not a section) -->
       <button data-key="work">[1]  WORK</button>
       <button data-key="about">[2]  ABOUT</button>
       <button data-key="contact">[3]  CONTACT</button>
     </div>
     <div class="divider"></div>
-    <div class="status">scroll/drag to orbit around the title • title stays fixed • subtle particle motion</div>
+    <div class="status">drag or scroll to orbit • title is static • dense particles • darker nebula</div>
   </aside>
 
 <script type="module">
@@ -76,16 +75,16 @@ import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
 /* ================= CONFIG ================= */
 const CONFIG = {
   // Dense clouds & titles
-  AMBIENT_COUNT: 80000,      // colorful ambient cloud (performance-friendly but dense)
-  SWARM_COUNT:   30000,      // ring near titles
-  SHAPE_COUNT:   100000,     // very dense title fill
-  BOX: 220,
-  BASE_SPEED: 0.03,
+  AMBIENT_COUNT: 100000,     // larger colorful ambient cloud
+  SWARM_COUNT:    40000,     // ring near titles
+  SHAPE_COUNT:   120000,     // very dense title fill
+  BOX: 260,
+  BASE_SPEED: 0.032,
   DAMPING: 0.985,
 
-  // Camera / orbit (camera moves, title stays)
+  // Camera / orbit (camera moves, title stays static)
   CAMERA_FOV: 60,
-  ORBIT_RADIUS: 220,         // slightly farther to guarantee fit
+  ORBIT_RADIUS: 240,         // farther back = safer fit
   ORBIT_DAMP:  0.12,
   ORBIT_SENS:  { theta: 0.008, phi: 0.006 },
   PHI_MIN: 0.35, PHI_MAX: Math.PI - 0.35,
@@ -94,27 +93,31 @@ const CONFIG = {
   CANVAS_W: 3600,
   STEP: 2,                    // 1 = ultra dense, 2 = very dense (good perf)
   THICKNESS: 6,               // depth jitter
-  SCALE_PAD: 0.80,            // stronger safety (no clipping)
-  TEXT_MARGIN: 0.78,          // more margin (no clipping)
+  SCALE_PAD: 0.78,            // stronger safety (no clipping)
+  TEXT_MARGIN: 0.80,          // margin factor (no clipping)
 
-  // Sub-title under START
-  SUB_SCALE: 0.50,            // “Welcome” size relative to main
-  SUB_GAP:   0.22,            // gap relative to main height
+  // “Welcome” subtitle under START
+  SUB_SCALE: 0.50,
+  SUB_GAP:   0.22,
 
-  // Title “life”
-  JITTER_AMP: 0.45,
-  JITTER_SPEED: 1.1,
+  // Title “life” (subtle)
+  JITTER_AMP: 0.35,
+  JITTER_SPEED: 1.0,
 
   // Mouse field (ambient reacts)
-  FIELD_RADIUS: 22,
-  FIELD_FORCE:  0.32,
+  FIELD_RADIUS: 26,
+  FIELD_FORCE:  0.34,
 };
 
 /* ================= SCENE ================= */
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x000102, 0.0048);
+scene.fog = new THREE.FogExp2(0x000102, 0.0052);
 
-const camera = new THREE.PerspectiveCamera(CONFIG.CAMERA_FOV, Math.max(innerWidth,1)/Math.max(innerHeight,1), 0.1, 12000);
+const camera = new THREE.PerspectiveCamera(
+  CONFIG.CAMERA_FOV,
+  Math.max(innerWidth,1)/Math.max(innerHeight,1),
+  0.1, 12000
+);
 
 // pivot = orbit center for camera; will be aligned to the title position
 const pivot = new THREE.Object3D(); scene.add(pivot);
@@ -128,16 +131,16 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setClearColor(0x000204, 1);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.9;
+renderer.toneMappingExposure = 1.65;  // darker overall
 document.body.appendChild(renderer.domElement);
 
 scene.add(new THREE.AmbientLight(0x0a120f, 1));
 
-/* Title stage (fixed), will always face the camera */
+/* Title stage (static), will face camera only initially */
 const stage = new THREE.Object3D(); scene.add(stage);
 
-/* ================= TIE-DYE FRACTAL BACKGROUND ================= */
-const nebulaUniforms = { uTime:{value:0}, uHueShift:{value:0.0}, uIntensity:{value:0.55} };
+/* ================= TIE-DYE FRACTAL BACKGROUND (darker) ================= */
+const nebulaUniforms = { uTime:{value:0}, uHueShift:{value:0.0}, uIntensity:{value:0.38} };
 const nebulaMat = new THREE.ShaderMaterial({
   side: THREE.BackSide, uniforms: nebulaUniforms,
   vertexShader: `varying vec3 vPos; void main(){ vPos=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);} `,
@@ -160,7 +163,7 @@ const nebulaMat = new THREE.ShaderMaterial({
       float f = fbm(p*2.0 + vec3(0.,0.,uTime*0.02));
       float bands = sin((p.x+p.y+p.z)*4.0 + uTime*0.10) * .5 + .5;
       float hue = fract(bands*0.8 + f*0.3 + uHueShift);
-      vec3 col = hsl2rgb(vec3(hue, 0.85, 0.28 + 0.36*(f)));
+      vec3 col = hsl2rgb(vec3(hue, 0.80, 0.22 + 0.24*(f)));
       col = mix(vec3(0.0), col, uIntensity);
       gl_FragColor = vec4(col, 1.0);
     }`
@@ -174,8 +177,8 @@ function makeDotTexture(size=128){
   const r=size/2, grad=g.createRadialGradient(r,r,0,r,r,r);
   grad.addColorStop(0.00,"rgba(255,255,255,1)");
   grad.addColorStop(0.50,"rgba(255,255,255,1)");
-  grad.addColorStop(0.76,"rgba(120,255,190,.55)");
-  grad.addColorStop(1.00,"rgba(120,255,190,0)");
+  grad.addColorStop(0.76,"rgba(160,255,220,.55)");
+  grad.addColorStop(1.00,"rgba(160,255,220,0)");
   g.fillStyle=grad; g.beginPath(); g.arc(r,r,r,0,Math.PI*2); g.fill();
   const tex=new THREE.CanvasTexture(c);
   tex.colorSpace=THREE.SRGBColorSpace; tex.minFilter=THREE.LinearFilter; tex.magFilter=THREE.LinearFilter; tex.generateMipmaps=false;
@@ -193,7 +196,7 @@ const hsl = (h,s,l)=>{
   } return [r,g,b];
 };
 
-/* ================= AMBIENT CLOUD ================= */
+/* ================= AMBIENT CLOUD (lots of light, vibrant colors) ================= */
 const ambCount = CONFIG.AMBIENT_COUNT;
 const ambPos = new Float32Array(ambCount*3);
 const ambCol = new Float32Array(ambCount*3);
@@ -202,25 +205,26 @@ for(let i=0;i<ambCount;i++){
   const j=i*3;
   ambPos[j+0]=rnd(-CONFIG.BOX,CONFIG.BOX);
   ambPos[j+1]=rnd(-CONFIG.BOX,CONFIG.BOX);
-  ambPos[j+2]=rnd(-700,700);
+  ambPos[j+2]=rnd(-800,800);
   ambVel[j+0]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   ambVel[j+1]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   ambVel[j+2]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
-  const hue=Math.random(); const [r,g,b]=hsl(hue, 0.95, 0.70+Math.random()*0.20);
+  const hue=Math.random();
+  const [r,g,b]=hsl(hue, 0.95, 0.82 + Math.random()*0.12);  // lighter, vibrant
   ambCol[j+0]=r; ambCol[j+1]=g; ambCol[j+2]=b;
 }
 const ambGeom = new THREE.BufferGeometry();
 ambGeom.setAttribute("position", new THREE.BufferAttribute(ambPos,3));
 ambGeom.setAttribute("color",    new THREE.BufferAttribute(ambCol,3));
 const ambMat = new THREE.PointsMaterial({
-  size:0.34, map:dotTex, transparent:true, opacity:0.98, depthWrite:false,
+  size:0.36, map:dotTex, transparent:true, opacity:0.98, depthWrite:false,
   blending:THREE.AdditiveBlending, vertexColors:true
 });
 const ambientPoints = new THREE.Points(ambGeom, ambMat);
 scene.add(ambientPoints);
 
 /* ================= SWARM RING (near titles) ================= */
-const swarmCount=30000;
+const swarmCount=CONFIG.SWARM_COUNT;
 const swarmPos=new Float32Array(swarmCount*3);
 const swarmCol=new Float32Array(swarmCount*3);
 const swarmTheta=new Float32Array(swarmCount);
@@ -228,23 +232,23 @@ const swarmRad=new Float32Array(swarmCount);
 const swarmSpeed=new Float32Array(swarmCount);
 const swarmYOff=new Float32Array(swarmCount);
 for(let i=0;i<swarmCount;i++){
-  const j=i*3; const r=rnd(28, 110), th=rnd(0,Math.PI*2), sp=rnd(0.05,0.22), yoff=rnd(-24,24);
+  const j=i*3; const r=rnd(28, 130), th=rnd(0,Math.PI*2), sp=rnd(0.05,0.22), yoff=rnd(-30,30);
   swarmRad[i]=r; swarmTheta[i]=th; swarmSpeed[i]=sp; swarmYOff[i]=yoff;
   swarmPos[j+0]=Math.cos(th)*r; swarmPos[j+1]=yoff; swarmPos[j+2]=Math.sin(th)*r;
-  const hue=Math.random(); const [rc,gc,bc]=hsl(hue, 0.98, 0.72);
+  const hue=Math.random(); const [rc,gc,bc]=hsl(hue, 0.98, 0.78);
   swarmCol[j+0]=rc; swarmCol[j+1]=gc; swarmCol[j+2]=bc;
 }
 const swarmGeom=new THREE.BufferGeometry();
 swarmGeom.setAttribute("position", new THREE.BufferAttribute(swarmPos,3));
 swarmGeom.setAttribute("color",    new THREE.BufferAttribute(swarmCol,3));
 const swarmMat=new THREE.PointsMaterial({
-  size:0.34, map:dotTex, transparent:true, opacity:0.98, depthWrite:false,
+  size:0.36, map:dotTex, transparent:true, opacity:0.98, depthWrite:false,
   blending:THREE.AdditiveBlending, vertexColors:true
 });
 const swarmPoints=new THREE.Points(swarmGeom,swarmMat);
 stage.add(swarmPoints);
 
-/* ================= TITLE PARTICLES (dense + living jitter) ================= */
+/* ================= TITLE PARTICLES (very dense + subtle life) ================= */
 const shapeCount=CONFIG.SHAPE_COUNT;
 const pos=new Float32Array(shapeCount*3);
 const vel=new Float32Array(shapeCount*3);
@@ -255,11 +259,11 @@ for(let i=0;i<shapeCount;i++){
   const j=i*3;
   pos[j+0]=rnd(-CONFIG.BOX*0.5,CONFIG.BOX*0.5);
   pos[j+1]=rnd(-CONFIG.BOX*0.5,CONFIG.BOX*0.5);
-  pos[j+2]=rnd(-60,60);
+  pos[j+2]=rnd(-80,80);
   vel[j+0]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   vel[j+1]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
   vel[j+2]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
-  const hue=Math.random(); const [rc,gc,bc]=hsl(hue, 1.0, 0.75);
+  const hue=Math.random(); const [rc,gc,bc]=hsl(hue, 1.0, 0.86);
   col[j+0]=rc; col[j+1]=gc; col[j+2]=bc;
   phase[i]=Math.random()*Math.PI*2;
 }
@@ -274,7 +278,7 @@ const shapePoints=new THREE.Points(shapeGeom,shapeMat);
 stage.add(shapePoints);
 const morphState={progress:1};
 
-/* ================= RIGHT-RAIL SAFE FIT (NO CLIP) ================= */
+/* ================= RIGHT-RAIL SAFE FIT (NO CLIP; centered in visible area) ================= */
 function planeWorldWidth(){
   const h = Math.max(innerHeight, 1);
   const w = Math.max(innerWidth, 1);
@@ -290,10 +294,16 @@ function safeArea(){
   const railPx=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rail-w'))||240;
   const worldPerPx=planeWorldWidth()/Math.max(innerWidth,1);
   const railW=railPx*worldPerPx;
-  const W=planeWorldWidth()  - railW*2.6;    // wide margin near the rail
-  const H=planeWorldHeight() * 0.78;         // generous vertical padding
-  const centerX = -railW*1.2;                // position left of rail
-  return { safeW: Math.max(28,W)*CONFIG.TEXT_MARGIN, safeH: Math.max(12,H)*CONFIG.TEXT_MARGIN, centerX };
+
+  // Visible (non-rail) world width, and center of that region
+  const visibleW = planeWorldWidth() - railW;
+  const centerX  = -railW/2;                     // center in the visible area
+
+  // Generous safety margins to avoid clipping anywhere
+  const safeW = Math.max(28, visibleW) * CONFIG.TEXT_MARGIN;
+  const safeH = Math.max(12, planeWorldHeight()) * CONFIG.TEXT_MARGIN;
+
+  return { safeW, safeH, centerX };
 }
 
 /* ================= TEXT SAMPLING (accurate bounds + dense points) ================= */
@@ -354,26 +364,31 @@ async function prepareText(){
   NORM.work = sampleText("Work");
   NORM.about= sampleText("About");
   NORM.contact=sampleText("Contact");
-  assignTargetsFor(section);
-  // second pass in case font metrics settle slightly later
+  assignTargetsFor(section, /*alignNow=*/true);
+  // second pass (font metrics settling)
   setTimeout(()=>{
     NORM.main = sampleText("Samuel Goldman");
     NORM.sub  = sampleText("Welcome");
     NORM.work = sampleText("Work");
     NORM.about= sampleText("About");
     NORM.contact=sampleText("Contact");
-    assignTargetsFor(section);
+    assignTargetsFor(section, /*alignNow=*/true);
   }, 350);
 }
 
-function assignTargetsFor(idx){
+function assignTargetsFor(idx, alignNow=false){
   const { safeW, safeH, centerX } = safeArea();
 
-  // Place title safely left of the rail
+  // Place title centered in visible area (not under the rail)
   stage.position.set(centerX, 0, 0);
 
-  // CRITICAL: orbit pivot follows title → camera orbits the title center
+  // Camera orbits around the title center
   pivot.position.copy(stage.position);
+
+  // At section load, face the camera ONCE (then stay static)
+  if (alignNow){
+    stage.lookAt(camera.position);
+  }
 
   let pool=[];
   if(idx===SECT.START){
@@ -400,7 +415,7 @@ function assignTargetsFor(idx){
     for(const t of D.normPts){ pool.push([t[0]*scale, t[1]*scale, (Math.random()-0.5)*jit]); }
   }
 
-  // Guard: if pool is empty, seed a tiny cluster at origin
+  // Guard: if pool is empty, seed a tiny cluster
   if (!pool || pool.length === 0) {
     const jit = CONFIG.THICKNESS*2;
     for (let i=0;i<2000;i++){
@@ -419,7 +434,7 @@ function assignTargetsFor(idx){
   morphState.progress=0;
 }
 
-/* ================= CAMERA ORBIT (scroll/drag; title stays) ================= */
+/* ================= CAMERA ORBIT (scroll/drag; title stays static) ================= */
 let theta=0, phi=Math.PI/2, tTheta=0, tPhi=Math.PI/2, dragging=false, lastX=0, lastY=0;
 function updateCamera(){
   theta += (tTheta - theta) * CONFIG.ORBIT_DAMP;
@@ -428,9 +443,9 @@ function updateCamera(){
   const x=r*Math.sin(phi)*Math.sin(theta), y=r*Math.cos(phi), z=r*Math.sin(phi)*Math.cos(theta);
   camHolder.position.set(x,y,z);
   camera.lookAt(stage.position);
-  // Title always faces camera (readable, doesn’t move)
-  stage.quaternion.copy(camera.quaternion);
-  // Reveal different tie-dye scenes as you orbit
+  // NOTE: we DO NOT re-orient the stage here -> stays static while you orbit
+
+  // Subtle hue shift as you orbit
   nebulaUniforms.uHueShift.value = (theta/(Math.PI*2)) % 1.0;
 }
 addEventListener('wheel', (e)=>{
@@ -460,7 +475,7 @@ function setSection(to){
   section=to;
   const keys=["start","work","about","contact"];
   document.querySelectorAll('.vnav button').forEach(b=>b.classList.toggle('active', b.dataset.key===keys[section]));
-  assignTargetsFor(section);
+  assignTargetsFor(section, /*alignNow=*/true); // face camera at the moment of switch
 }
 document.querySelectorAll('.vnav button').forEach(btn=>{
   btn.addEventListener('click', ()=> setSection({start:0,work:1,about:2,contact:3}[btn.dataset.key]));
@@ -493,7 +508,7 @@ function animate(){
     const dx=ambPos[j+0]-fieldPos.x, dy=ambPos[j+1]-fieldPos.y, dz=ambPos[j+2]-fieldPos.z;
     const d2=dx*dx+dy*dy+dz*dz; if(d2<r2){ const f=(1-d2/r2)*CONFIG.FIELD_FORCE; ambVel[j+0]+=dx*f*dt*30; ambVel[j+1]+=dy*f*dt*30; ambVel[j+2]+=dz*f*dt*30; }
     ambPos[j+0]+=ambVel[j+0]; ambPos[j+1]+=ambVel[j+1]; ambPos[j+2]+=ambVel[j+2];
-    const B=CONFIG.BOX, Zmin=-700, Zmax=700;
+    const B=CONFIG.BOX, Zmin=-800, Zmax=800;
     if(ambPos[j+0]<-B) ambPos[j+0]+=2*B; else if(ambPos[j+0]>B) ambPos[j+0]-=2*B;
     if(ambPos[j+1]<-B) ambPos[j+1]+=2*B; else if(ambPos[j+1]>B) ambPos[j+1]-=2*B;
     if(ambPos[j+2]<Zmin) ambPos[j+2]=Zmax; else if(ambPos[j+2]>Zmax) ambPos[j+2]=Zmin;
@@ -542,7 +557,7 @@ addEventListener("resize",()=>{
   camera.aspect=Math.max(innerWidth,1)/Math.max(innerHeight,1);
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
-  assignTargetsFor(section);
+  assignTargetsFor(section, /*alignNow=*/true); // re-center for new viewport
 });
 </script>
 </body>
