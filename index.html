@@ -75,14 +75,14 @@ const CONFIG = {
   // Dense!
   AMBIENT_COUNT: 90000,      // full-screen color cloud
   SWARM_COUNT:   30000,      // ring near titles
-  SHAPE_COUNT:   80000,      // very dense title
+  SHAPE_COUNT:   100000,     // even denser title
   BOX: 220,
   BASE_SPEED: 0.03,
   DAMPING: 0.985,
 
   // Camera / orbit (camera moves, title stays)
   CAMERA_FOV: 60,
-  ORBIT_RADIUS: 190,
+  ORBIT_RADIUS: 210,         // slightly farther to guarantee fit
   ORBIT_DAMP:  0.12,
   ORBIT_SENS:  { theta: 0.008, phi: 0.006 },
   PHI_MIN: 0.35, PHI_MAX: Math.PI - 0.35,
@@ -91,11 +91,11 @@ const CONFIG = {
   SECTIONS: ["Samuel Goldman","Work","About","Contact"],
 
   // Text sampling & fit
-  CANVAS_W: 3400,
-  STEP: 2,                    // smaller = denser point sampling
+  CANVAS_W: 3600,
+  STEP: 2,                    // sampling step (dense)
   THICKNESS: 6,               // title depth jitter
-  SCALE_PAD: 0.86,            // extra safety to avoid clipping
-  TEXT_MARGIN: 0.82,          // global margin (more safety)
+  SCALE_PAD: 0.82,            // bigger safety pad (no clipping)
+  TEXT_MARGIN: 0.78,          // more margin (no clipping)
 
   // Sub-title under START
   SUB_SCALE: 0.50,            // “Welcome” size relative to main
@@ -128,7 +128,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setClearColor(0x000204, 1);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.85;
+renderer.toneMappingExposure = 1.9;
 document.body.appendChild(renderer.domElement);
 
 scene.add(new THREE.AmbientLight(0x0a120f, 1));
@@ -281,9 +281,9 @@ function safeArea(){
   const railPx=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rail-w'))||240;
   const worldPerPx=planeWorldWidth()/innerWidth;     // width on the z=0 plane per screen pixel
   const railW=railPx*worldPerPx;                     // rail width in world units
-  const W=planeWorldWidth()  - railW*2.4;            // generous margin for the rail
-  const H=planeWorldHeight() * 0.80;                 // generous vertical padding
-  const centerX = -railW*1.15;                       // push left away from right rail
+  const W=planeWorldWidth()  - railW*2.6;            // even more margin for the rail
+  const H=planeWorldHeight() * 0.78;                 // generous vertical padding
+  const centerX = -railW*1.2;                        // push left away from right rail
   return { safeW: Math.max(28,W)*CONFIG.TEXT_MARGIN, safeH: Math.max(12,H)*CONFIG.TEXT_MARGIN, centerX };
 }
 
@@ -351,7 +351,7 @@ function assignTargetsFor(idx){
   // Put the title where it safely clears the right rail
   stage.position.set(centerX, 0, 0);
 
-  // VERY IMPORTANT: orbit pivot = title position → camera orbits the title center
+  // IMPORTANT: orbit pivot = title position → camera orbits the title center
   pivot.position.copy(stage.position);
 
   let pool=[];
