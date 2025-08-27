@@ -1,43 +1,466 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <title>Storybook Portfolio • Three.js</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Surreal Clearing</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        /* CSS for the entire page */
+        :root {
+            --yellow: #FFD700;
+            --red: #DC143C;
+            --blue: #0047AB;
+            --text-color: #333;
+            --bg-color: #f0f8ff;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden; /* Prevents scrollbars from appearing */
+        }
+
+        /* Canvas for the 3D scene */
+        #storybook-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            outline: none;
+        }
+
+        /* Header Navigation */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px 40px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        header button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        header button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        #btn-yellow { background-color: var(--yellow); color: #4a3f00; }
+        #btn-red { background-color: var(--red); color: white; }
+        #btn-blue { background-color: var(--blue); color: white; }
+        
+        /* UI Panels Overlay */
+        .panel-overlay {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            z-index: 20;
+            pointer-events: none; /* Allows clicks to pass through to the canvas */
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .panel-overlay.active {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto; /* Re-enable pointer events when active */
+        }
+        
+        .panel-content {
+            width: 90%;
+            max-width: 800px;
+            height: 75vh;
+            margin-bottom: 5vh;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            padding: 40px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .panel-content h2 {
+            margin-top: 0;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .panel-content p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            max-width: 700px;
+        }
+
+        .image-placeholder {
+            width: 100%;
+            height: 300px;
+            background-color: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-style: italic;
+            color: #666;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            color: #888;
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+        
+        /* Hint Text */
+        .hint-text {
+            position: fixed;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            font-weight: 500;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+    </style>
 </head>
 <body>
-    <div id="container"></div>
+    
+    <canvas id="storybook-canvas"></canvas>
+    
+    <header>
+        <button id="btn-yellow" data-panel="panel-a">Yellow Door</button>
+        <button id="btn-red" data-panel="panel-b">Red Door</button>
+        <button id="btn-blue" data-panel="panel-c">Blue Door</button>
+    </header>
 
-    <div class="content">
-        <div class="forest-spacer"></div>
+    <div id="panel-a" class="panel-overlay">
+        <div class="panel-content">
+            <span class="close-btn">&times;</span>
+            <h2 style="color: var(--yellow);">Project A — Liminal Interactive</h2>
+            <p>This project explores interactive storytelling through a series of dreamlike, liminal spaces. Users navigate environments that shift and respond to their presence, creating a unique narrative experience that blurs the line between game and art installation.</p>
+            <div class="image-placeholder">[ Image or Video for Project A ]</div>
+        </div>
+    </div>
 
-        <div class="clearing-overlay" id="clearing-overlay">
-            <h1>The Clearing</h1>
-            <div class="doors">
-                <a href="#work" class="door">
-                    <p>Work</p>
-                </a>
-                <a href="#about" class="door">
-                    <p>About</p>
-                </a>
-                <a href="#contact" class="door">
-                    <p>Contact</p>
-                </a>
-            </div>
+    <div id="panel-b" class="panel-overlay">
+        <div class="panel-content">
+            <span class="close-btn">&times;</span>
+            <h2 style="color: var(--red);">Project B — Identity & Motion</h2>
+            <p>A brand identity and motion graphics package designed for a cutting-edge tech startup. The visual system is built on principles of kinetic energy and fluid motion, reflecting the company's dynamic and adaptive nature in the fast-paced market.</p>
+            <div class="image-placeholder">[ Image or Video for Project B ]</div>
+        </div>
+    </div>
+
+    <div id="panel-c" class="panel-overlay">
+        <div class="panel-content">
+            <span class="close-btn">&times;</span>
+            <h2 style="color: var(--blue);">Project C — Web Experience</h2>
+            <p>An immersive e-commerce website that reinvents the online shopping journey. Using 3D product visualizations and a gamified checkout process, the platform turns purchasing into an engaging and memorable web experience.</p>
+            <div class="image-placeholder">[ Image or Video for Project C ]</div>
         </div>
     </div>
     
-    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <p class="hint-text">Click a door • Drag to look • Scroll to zoom</p>
+
+
     <script type="importmap">
         {
             "imports": {
-                "three": "https://unpkg.com/three@0.155.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.155.0/examples/jsm/"
+                "three": "https://unpkg.com/three@0.165.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.165.0/examples/jsm/"
             }
         }
     </script>
-    <script type="module" src="main.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // SCENE SETUP
+        // =================================================================
+        const scene = new THREE.Scene();
+        const clock = new THREE.Clock();
+
+        // Surrealist Colors
+        const skyColor = 0x40E0D0; // Turquoise
+        const hillColor = 0x004d00; // Deep Green
+        const fogColor = skyColor;
+        const ambientLightColor = 0xFFFFFF;
+        const directionalLightColor = 0xFFFFFF;
+        
+        scene.background = new THREE.Color(skyColor);
+        scene.fog = new THREE.Fog(fogColor, 50, 200);
+
+        // CAMERA
+        // =================================================================
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 15, 50);
+
+        // RENDERER
+        // =================================================================
+        const renderer = new THREE.WebGLRenderer({
+            canvas: document.querySelector('#storybook-canvas'),
+            antialias: true,
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        // LIGHTING
+        // =================================================================
+        const ambientLight = new THREE.AmbientLight(ambientLightColor, 0.5);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(directionalLightColor, 1.5);
+        directionalLight.position.set(50, 50, 25);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 200;
+        directionalLight.shadow.camera.left = -100;
+        directionalLight.shadow.camera.right = 100;
+        directionalLight.shadow.camera.top = 100;
+        directionalLight.shadow.camera.bottom = -100;
+        scene.add(directionalLight);
+
+        // CONTROLS
+        // =================================================================
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 20;
+        controls.maxDistance = 100;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05; // Prevent going under the ground
+        controls.target.set(0, 5, 0);
+
+        // OBJECTS
+        // =================================================================
+        const interactiveObjects = [];
+
+        // --- Rolling Hills (with custom shader for breathing effect) ---
+        const hillGeometry = new THREE.PlaneGeometry(300, 300, 100, 100);
+
+        // Simple noise function using sin/cos for organic shapes
+        const getNoise = (x, y) => {
+            return (Math.sin(x * 0.1) + Math.cos(y * 0.1)) * 4 + 
+                   (Math.sin(x * 0.05) * Math.cos(y * 0.05)) * 8;
+        };
+        
+        const positionAttribute = hillGeometry.getAttribute('position');
+        for (let i = 0; i < positionAttribute.count; i++) {
+            const x = positionAttribute.getX(i);
+            const y = positionAttribute.getY(i);
+            positionAttribute.setZ(i, getNoise(x, y));
+        }
+        hillGeometry.computeVertexNormals();
+        
+        const hillMaterial = new THREE.MeshStandardMaterial({
+            color: hillColor,
+            onBeforeCompile: shader => {
+                // Add time uniform for animation
+                shader.uniforms.uTime = { value: 0 };
+                // Animate vertices in the vertex shader for performance
+                shader.vertexShader = 'uniform float uTime;\n' + shader.vertexShader;
+                shader.vertexShader = shader.vertexShader.replace(
+                    '#include <begin_vertex>',
+                    `
+                    #include <begin_vertex>
+                    // Gentle breathing animation
+                    float breath = sin(position.x * 0.05 + uTime * 0.5) * 0.3;
+                    transformed.z += breath;
+                    `
+                );
+                // Store the shader to update the time uniform in the animate loop
+                hillMaterial.userData.shader = shader;
+            }
+        });
+
+        const hills = new THREE.Mesh(hillGeometry, hillMaterial);
+        hills.rotation.x = -Math.PI / 2;
+        hills.receiveShadow = true;
+        scene.add(hills);
+
+        // --- Doors ---
+        const createDoor = (color, position, name) => {
+            const doorGroup = new THREE.Group();
+            
+            const doorMaterial = new THREE.MeshStandardMaterial({
+                color: 0x111111,
+                roughness: 0.8,
+            });
+            const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(6, 11, 0.5), doorMaterial);
+            doorFrame.position.y = 5;
+
+            const glowingPanelMaterial = new THREE.MeshStandardMaterial({
+                emissive: color,
+                emissiveIntensity: 2.5,
+                color: color,
+            });
+            const glowingPanel = new THREE.Mesh(new THREE.BoxGeometry(5, 10, 0.6), glowingPanelMaterial);
+            glowingPanel.position.y = 5.0;
+
+            doorGroup.add(doorFrame);
+            doorGroup.add(glowingPanel);
+            
+            doorGroup.position.set(position.x, getNoise(position.x, position.z) + position.y, position.z);
+            doorGroup.name = name;
+            doorGroup.castShadow = true;
+            
+            scene.add(doorGroup);
+            interactiveObjects.push(doorGroup);
+            return doorGroup;
+        };
+
+        const yellowDoor = createDoor(new THREE.Color(0xFFD700), new THREE.Vector3(0, 0.5, 0), 'yellowDoor');
+        const redDoor = createDoor(new THREE.Color(0xDC143C), new THREE.Vector3(-30, 0.5, -20), 'redDoor');
+        const blueDoor = createDoor(new THREE.Color(0x0047AB), new THREE.Vector3(30, 0.5, -15), 'blueDoor');
+
+
+        // INTERACTIVITY
+        // =================================================================
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        const onCanvasClick = (event) => {
+            // Calculate mouse position in normalized device coordinates (-1 to +1)
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        
+            raycaster.setFromCamera(mouse, camera);
+        
+            // Find all doors intersected by the ray
+            const intersects = raycaster.intersectObjects(interactiveObjects, true);
+        
+            if (intersects.length > 0) {
+                // Get the top-level group (the door itself)
+                let clickedObject = intersects[0].object;
+                while (clickedObject.parent && clickedObject.parent.type !== 'Scene') {
+                    clickedObject = clickedObject.parent;
+                }
+                
+                // Trigger door bounce animation
+                gsap.to(clickedObject.position, {
+                    y: `+=${1.5}`, // bounce height
+                    duration: 0.2,
+                    ease: 'power2.out',
+                    yoyo: true,
+                    repeat: 1
+                });
+
+                // Show the corresponding UI panel
+                const panelId = doorPanelMap[clickedObject.name];
+                if (panelId) showPanel(panelId);
+            }
+        };
+        window.addEventListener('click', onCanvasClick);
+
+        // UI PANEL LOGIC
+        // =================================================================
+        const doorPanelMap = {
+            'yellowDoor': 'panel-a',
+            'redDoor': 'panel-b',
+            'blueDoor': 'panel-c'
+        };
+
+        const panels = document.querySelectorAll('.panel-overlay');
+        const navButtons = document.querySelectorAll('header button');
+        const closeButtons = document.querySelectorAll('.close-btn');
+
+        const hideAllPanels = () => {
+            panels.forEach(panel => panel.classList.remove('active'));
+        };
+
+        const showPanel = (panelId) => {
+            hideAllPanels();
+            const panel = document.getElementById(panelId);
+            if (panel) panel.classList.add('active');
+        };
+
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                showPanel(button.dataset.panel);
+            });
+        });
+
+        closeButtons.forEach(button => {
+            button.addEventListener('click', hideAllPanels);
+        });
+        
+        // Also close panel if user clicks on the overlay background
+        panels.forEach(panel => {
+            panel.addEventListener('click', (e) => {
+                if (e.target === panel) {
+                    hideAllPanels();
+                }
+            })
+        });
+
+        // WINDOW RESIZE HANDLING
+        // =================================================================
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        });
+
+        // ANIMATION LOOP
+        // =================================================================
+        const animate = () => {
+            const elapsedTime = clock.getElapsedTime();
+            
+            // Update hill shader for breathing animation
+            if (hillMaterial.userData.shader) {
+                hillMaterial.userData.shader.uniforms.uTime.value = elapsedTime;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        };
+
+        animate();
+    </script>
 </body>
 </html>
 
