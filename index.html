@@ -3,191 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Surreal Hills Portfolio</title>
+    <title>Sam's Surreal Portfolio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Loading Screen -->
     <div id="loading-screen">
         <div class="loading-content">
-            <div class="loading-spinner"></div>
-            <p class="loading-text">Generating Landscape...</p>
-            <div class="loading-progress">
-                <div class="progress-bar"></div>
+            <div class="portal-ring">
+                <div class="inner-ring"></div>
+                <div class="outer-ring"></div>
+            </div>
+            <h1 class="loading-title">ENTERING SAM'S PORTFOLIO</h1>
+            <p class="loading-subtitle">Initializing Reality Distortion Field...</p>
+            <div class="loading-bar">
+                <div class="loading-progress"></div>
             </div>
         </div>
     </div>
 
     <!-- Three.js Canvas -->
-    <canvas id="surreal-canvas"></canvas>
+    <canvas id="reality-canvas"></canvas>
 
     <!-- UI Overlay -->
     <div id="ui-overlay">
         <!-- Crosshair -->
         <div id="crosshair">
-            <div class="crosshair-center"></div>
+            <div class="crosshair-dot"></div>
+            <div class="crosshair-lines">
+                <div class="line horizontal"></div>
+                <div class="line vertical"></div>
+            </div>
         </div>
 
         <!-- Instructions -->
-        <div id="instructions" class="ui-panel">
-            <p>WASD to walk • Mouse to look • Click on houses to enter</p>
-            <p>SHIFT to run • SPACE to jump • ESC to unlock cursor</p>
+        <div id="instructions" class="glass-panel">
+            <div class="panel-header">NAVIGATION CONTROLS</div>
+            <p>WASD • Move through reality</p>
+            <p>MOUSE • Look around</p>
+            <p>SHIFT • Run faster</p>
+            <p>SPACE • Jump/Float</p>
+            <p>CLICK • Interact with portals</p>
         </div>
 
-        <!-- House Info -->
-        <div id="house-info" class="ui-panel hidden">
-            <div class="house-icon">🏠</div>
-            <p id="house-name">Strange House</p>
-            <p class="house-subtitle">Click to explore</p>
+        <!-- Portal Info -->
+        <div id="portal-info" class="glass-panel hidden">
+            <div class="portal-icon">🌀</div>
+            <div id="portal-name">DIMENSIONAL GATEWAY</div>
+            <div class="portal-subtitle">Click to enter</div>
         </div>
 
-        <!-- Environment Info -->
-        <div id="environment-info" class="ui-panel">
-            <div class="weather-icon">☀️</div>
-            <p id="location-name">Surreal Valley</p>
-            <p class="coordinates">37.7749° N, 122.4194° W</p>
-        </div>
-
-        <!-- Minimap -->
-        <div id="minimap" class="ui-panel">
-            <canvas id="minimap-canvas" width="120" height="120"></canvas>
-            <div class="minimap-player"></div>
+        <!-- Reality Status -->
+        <div id="reality-status" class="glass-panel">
+            <div class="status-indicator pulsing"></div>
+            <div class="status-text">
+                <div class="location">SAM'S DIMENSION</div>
+                <div class="coordinates">∞.∞∞∞° N, ∞.∞∞∞° W</div>
+            </div>
         </div>
     </div>
 
     <!-- Content Sections -->
     <div id="content-overlay" class="hidden">
         <div class="content-container">
-            <button id="back-btn" class="back-button">← Exit House</button>
+            <button id="back-btn" class="back-button">← EXIT PORTAL</button>
             
-            <!-- About House -->
+            <!-- About Portal -->
             <section id="about-content" class="content-section">
-                <div class="house-interior about-house">
-                    <div class="room-header">
-                        <h1>The Memory House</h1>
-                        <p class="room-description">A place where thoughts take physical form</p>
+                <div class="portal-interior about-portal">
+                    <div class="reality-header">
+                        <h1 class="glitch-title" data-text="ABOUT SAM">ABOUT SAM</h1>
+                        <div class="subtitle">Digital Reality Architect</div>
                     </div>
                     
-                    <div class="room-content">
-                        <div class="floating-elements">
-                            <div class="memory-orb" style="--delay: 0s">
-                                <h3>Digital Architect</h3>
-                                <p>Crafting experiences that blur the line between reality and imagination</p>
-                            </div>
-                            <div class="memory-orb" style="--delay: 0.5s">
-                                <h3>Creative Technologist</h3>
-                                <p>Specializing in immersive web experiences and interactive design</p>
-                            </div>
-                            <div class="memory-orb" style="--delay: 1s">
-                                <h3>Reality Bender</h3>
-                                <p>Using code to create impossible spaces and surreal interactions</p>
-                            </div>
+                    <div class="floating-bio">
+                        <div class="bio-orb primary">
+                            <h3>Creative Technologist</h3>
+                            <p>Crafting impossible experiences at the intersection of code and imagination</p>
                         </div>
-                        
-                        <div class="skills-constellation">
-                            <div class="skill-star" data-skill="JavaScript">JS</div>
-                            <div class="skill-star" data-skill="Three.js">3D</div>
-                            <div class="skill-star" data-skill="React">⚛️</div>
-                            <div class="skill-star" data-skill="WebGL">GL</div>
-                            <div class="skill-star" data-skill="GLSL">SH</div>
-                            <div class="skill-star" data-skill="Node.js">📦</div>
+                        <div class="bio-orb secondary">
+                            <h3>Reality Bender</h3>
+                            <p>Specializing in immersive web experiences that challenge perception</p>
                         </div>
+                        <div class="bio-orb tertiary">
+                            <h3>Digital Explorer</h3>
+                            <p>Pushing the boundaries of what's possible in browser-based experiences</p>
+                        </div>
+                    </div>
+                    
+                    <div class="skill-constellation">
+                        <div class="skill-node" data-skill="JavaScript">JS</div>
+                        <div class="skill-node" data-skill="Three.js">3D</div>
+                        <div class="skill-node" data-skill="React">⚛️</div>
+                        <div class="skill-node" data-skill="WebGL">GL</div>
+                        <div class="skill-node" data-skill="GLSL">SH</div>
+                        <div class="skill-node" data-skill="Node.js">📦</div>
+                        <div class="skill-node" data-skill="TypeScript">TS</div>
+                        <div class="skill-node" data-skill="Python">🐍</div>
                     </div>
                 </div>
             </section>
 
-            <!-- Work House -->
+            <!-- Work Portal -->
             <section id="work-content" class="content-section">
-                <div class="house-interior work-house">
-                    <div class="room-header">
-                        <h1>The Workshop</h1>
-                        <p class="room-description">Where impossible projects come to life</p>
+                <div class="portal-interior work-portal">
+                    <div class="reality-header">
+                        <h1 class="glitch-title" data-text="PROJECTS">PROJECTS</h1>
+                        <div class="subtitle">Impossible Creations</div>
                     </div>
                     
-                    <div class="room-content">
-                        <div class="project-gallery">
-                            <div class="project-frame">
-                                <div class="project-preview surreal-preview"></div>
-                                <div class="project-info">
-                                    <h3>Surreal Portfolio</h3>
-                                    <p>This hyper-realistic landscape you're exploring</p>
-                                    <div class="tech-stack">Three.js • WebGL • Procedural Generation</div>
-                                </div>
+                    <div class="project-matrix">
+                        <div class="project-cube">
+                            <div class="cube-face front">
+                                <h3>Surreal Portfolio</h3>
+                                <p>This reality-bending experience you're exploring</p>
+                                <div class="tech-tags">Three.js • WebGL • Shaders</div>
                             </div>
-                            
-                            <div class="project-frame">
-                                <div class="project-preview liminal-preview"></div>
-                                <div class="project-info">
-                                    <h3>Liminal Spaces</h3>
-                                    <p>Interactive exploration of transitional environments</p>
-                                    <div class="tech-stack">Three.js • Atmospheric Rendering</div>
-                                </div>
+                        </div>
+                        
+                        <div class="project-cube">
+                            <div class="cube-face front">
+                                <h3>Quantum Interface</h3>
+                                <p>UI that exists in multiple dimensions simultaneously</p>
+                                <div class="tech-tags">React • CSS Houdini • WebXR</div>
                             </div>
-                            
-                            <div class="project-frame">
-                                <div class="project-preview quantum-preview"></div>
-                                <div class="project-info">
-                                    <h3>Quantum Interface</h3>
-                                    <p>UI that exists in multiple dimensions simultaneously</p>
-                                    <div class="tech-stack">React • CSS Houdini • WebXR</div>
-                                </div>
+                        </div>
+                        
+                        <div class="project-cube">
+                            <div class="cube-face front">
+                                <h3>Neural Network Viz</h3>
+                                <p>Interactive visualization of AI decision making</p>
+                                <div class="tech-tags">D3.js • TensorFlow.js • WebGL</div>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Contact House -->
+            <!-- Contact Portal -->
             <section id="contact-content" class="content-section">
-                <div class="house-interior contact-house">
-                    <div class="room-header">
-                        <h1>The Communication Hub</h1>
-                        <p class="room-description">Signals from across the digital realm</p>
+                <div class="portal-interior contact-portal">
+                    <div class="reality-header">
+                        <h1 class="glitch-title" data-text="CONTACT">CONTACT</h1>
+                        <div class="subtitle">Establish Connection</div>
                     </div>
                     
-                    <div class="room-content">
-                        <div class="communication-array">
-                            <div class="signal-tower">
-                                <div class="signal-waves"></div>
-                                <a href="mailto:hello@example.com" class="contact-beacon">
-                                    <div class="beacon-icon">📧</div>
-                                    <div class="beacon-info">
-                                        <span class="beacon-label">Email Signal</span>
-                                        <span class="beacon-value">hello@example.com</span>
-                                    </div>
-                                </a>
+                    <div class="communication-grid">
+                        <a href="mailto:sam@example.com" class="comm-portal">
+                            <div class="portal-ring small">
+                                <div class="inner-ring"></div>
                             </div>
-                            
-                            <div class="signal-tower">
-                                <div class="signal-waves"></div>
-                                <a href="#" class="contact-beacon">
-                                    <div class="beacon-icon">🐙</div>
-                                    <div class="beacon-info">
-                                        <span class="beacon-label">GitHub Portal</span>
-                                        <span class="beacon-value">@username</span>
-                                    </div>
-                                </a>
+                            <div class="comm-info">
+                                <div class="comm-label">EMAIL TRANSMISSION</div>
+                                <div class="comm-value">sam@example.com</div>
                             </div>
-                            
-                            <div class="signal-tower">
-                                <div class="signal-waves"></div>
-                                <a href="#" class="contact-beacon">
-                                    <div class="beacon-icon">💼</div>
-                                    <div class="beacon-info">
-                                        <span class="beacon-label">LinkedIn Network</span>
-                                        <span class="beacon-value">@username</span>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
+                        </a>
                         
-                        <div class="availability-status">
-                            <div class="status-orb pulsing"></div>
-                            <span>Currently available for new adventures</span>
-                        </div>
+                        <a href="#" class="comm-portal">
+                            <div class="portal-ring small">
+                                <div class="inner-ring"></div>
+                            </div>
+                            <div class="comm-info">
+                                <div class="comm-label">GITHUB REPOSITORY</div>
+                                <div class="comm-value">@samuelgoldman</div>
+                            </div>
+                        </a>
+                        
+                        <a href="#" class="comm-portal">
+                            <div class="portal-ring small">
+                                <div class="inner-ring"></div>
+                            </div>
+                            <div class="comm-info">
+                                <div class="comm-label">LINKEDIN NETWORK</div>
+                                <div class="comm-value">@samuelgoldman</div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <div class="availability-beacon">
+                        <div class="beacon-pulse"></div>
+                        <span>Currently available for reality-bending projects</span>
                     </div>
                 </div>
             </section>
