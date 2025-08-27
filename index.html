@@ -1,115 +1,43 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Hopper Forest — Doors</title>
-  <meta name="description" content="Cinematic 2D scroll through a whimsical forest to a clearing with three glowing doors." />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Work+Sans:wght@300;400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Surreal Clearing</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="topbar" role="banner">
-    <div class="brand">Hopper Forest</div>
-    <nav aria-label="Primary">
-      <a href="#clearing">Doors</a>
-      <a href="#about">About</a>
-    </nav>
-  </header>
+    <div id="container"></div>
 
-  <!-- Intro / establishing scene -->
-  <section class="scene scene--intro" aria-label="Forest entry">
-    <div class="layer sky"></div>
-    <div class="layer haze"></div>
-    <div class="layer silhouettes"></div>
-    <div class="layer trunks"></div>
-    <div class="layer foreground"></div>
-    <div class="copy">
-      <h1>Windows into my work</h1>
-      <p>Scroll through the quiet. Follow the light. Choose a door.</p>
-      <div class="hint">Scroll ↓</div>
+    <div class="content">
+        <div class="forest-spacer"></div>
+
+        <div class="clearing-overlay" id="clearing-overlay">
+            <h1>The Clearing</h1>
+            <div class="doors">
+                <a href="#work" class="door">
+                    <p>Work</p>
+                </a>
+                <a href="#about" class="door">
+                    <p>About</p>
+                </a>
+                <a href="#contact" class="door">
+                    <p>Contact</p>
+                </a>
+            </div>
+        </div>
     </div>
-  </section>
-
-  <!-- Glide / deeper forest -->
-  <section class="scene scene--glide" aria-label="Moving through the forest">
-    <div class="layer sky"></div>
-    <div class="layer rays"></div>
-    <div class="layer silhouettes"></div>
-    <div class="layer midhills"></div>
-    <div class="layer trunks"></div>
-    <div class="layer foreground"></div>
-  </section>
-
-  <!-- Pinned clearing with doors -->
-  <section id="clearing" class="pin-wrap" aria-label="Clearing with doors">
-    <div class="pin">
-      <div class="layer sky sky--bright"></div>
-      <div class="layer rays rays--wide"></div>
-      <div class="layer clearing-hills"></div>
-
-      <div class="doors" role="list" aria-label="Choose a door">
-        <button class="door door--yellow" role="listitem" aria-controls="panel-yellow" aria-expanded="false">
-          <span class="door__label">Liminal</span>
-        </button>
-        <button class="door door--red" role="listitem" aria-controls="panel-red" aria-expanded="false">
-          <span class="door__label">Identity</span>
-        </button>
-        <button class="door door--blue" role="listitem" aria-controls="panel-blue" aria-expanded="false">
-          <span class="door__label">Web</span>
-        </button>
-      </div>
-
-      <div class="hint hint--pin">Click a door • Move mouse to tilt • Press ESC to close</div>
-    </div>
-  </section>
-
-  <!-- Panels (case studies) -->
-  <section class="panel" id="panel-yellow" aria-modal="true" role="dialog" aria-labelledby="panel-yellow-title">
-    <div class="panel__inner">
-      <header class="panel__head">
-        <h2 id="panel-yellow-title">Project A — Liminal Interactive</h2>
-        <button class="panel__close" data-close>Close</button>
-      </header>
-      <p>A quiet interface for reflective moments. Cinematic light, minimal UI, gentle motion.</p>
-    </div>
-  </section>
-
-  <section class="panel" id="panel-red" aria-modal="true" role="dialog" aria-labelledby="panel-red-title">
-    <div class="panel__inner">
-      <header class="panel__head">
-        <h2 id="panel-red-title">Project B — Identity & Motion</h2>
-        <button class="panel__close" data-close>Close</button>
-      </header>
-      <p>Brand system with typographic rhythm and logo motion studies grounded in place.</p>
-    </div>
-  </section>
-
-  <section class="panel" id="panel-blue" aria-modal="true" role="dialog" aria-labelledby="panel-blue-title">
-    <div class="panel__inner">
-      <header class="panel__head">
-        <h2 id="panel-blue-title">Project C — Web Experience</h2>
-        <button class="panel__close" data-close>Close</button>
-      </header>
-      <p>Presence-first web UX: finite feeds, warm affordances, and dignified pacing.</p>
-    </div>
-  </section>
-
-  <!-- Outro -->
-  <section id="about" class="scene scene--outro" aria-label="About">
-    <div class="copy">
-      <h2>About the work</h2>
-      <p>Inspired by Edward Hopper’s light and quiet, these projects aim for presence over performance.</p>
-    </div>
-  </section>
-
-  <footer class="footer" role="contentinfo">
-    <small>© <span id="year"></span> Sam Goldman</small>
-  </footer>
-
-  <script src="script.js"></script>
+    
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.155.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.155.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="main.js"></script>
 </body>
 </html>
 
