@@ -1,564 +1,108 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Samuel Goldman — Particle Space</title>
-
-<!-- Favicon (prevents 404) -->
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='28' fill='%2300ff88'/></svg>">
-
-<!-- Fonts -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-
-<style>
-  :root{
-    --rail-w: 240px;           /* right menu width */
-    --neon:  #00ff88;
-  }
-  html,body{height:100%;margin:0;background:#000204;overflow:hidden}
-  canvas{display:block}
-
-  /* RIGHT neon “code” rail */
-  .rail{
-    position:fixed; inset:0 0 0 auto; width:var(--rail-w); z-index:30;
-    padding:18px 14px; display:grid; gap:14px; align-content:start;
-    background:linear-gradient(180deg,rgba(2,3,5,.95),rgba(2,3,5,.72));
-    border-left:1px solid rgba(0,255,120,.22);
-    box-shadow: inset 0 0 40px rgba(0,255,120,.08);
-    backdrop-filter: blur(10px);
-    color:#b9ffd7; font:14px/1.5 'Share Tech Mono', ui-monospace, Menlo, Consolas, monospace;
-  }
-  .brand{
-    color:#00ffa6; text-shadow:0 0 8px rgba(0,255,160,.5), 0 0 22px rgba(0,255,130,.25);
-    font-weight:700; letter-spacing:.05em;
-  }
-  .divider{
-    height:1px; background:linear-gradient(90deg, rgba(0,255,160,0), rgba(0,255,160,.5), rgba(0,255,160,0));
-    box-shadow:0 0 12px rgba(0,255,160,.35);
-  }
-  .vnav{display:grid; gap:10px}
-  .vnav button{
-    appearance:none; border:1px solid rgba(0,255,160,.35);
-    background:rgba(0,30,20,.35);
-    color:#b9ffd7; padding:10px 12px; border-radius:10px; cursor:pointer;
-    font:14px/1.2 'Share Tech Mono', monospace; letter-spacing:.02em; text-align:left;
-    box-shadow: inset 0 0 18px rgba(0,255,160,.12), 0 0 14px rgba(0,255,160,.12);
-    transition:transform .12s ease, box-shadow .16s ease, border-color .16s ease;
-  }
-  .vnav button:hover{ transform:translateY(-1px); border-color:rgba(0,255,160,.6); box-shadow: inset 0 0 22px rgba(0,255,160,.2), 0 0 18px rgba(0,255,160,.2) }
-  .vnav button.active{ color:#eafff5; border-color:#00ffb3; box-shadow: inset 0 0 26px rgba(0,255,160,.28), 0 0 24px rgba(0,255,160,.28) }
-  .status{ color:#7dffc0; font-size:12px; opacity:.9; white-space:pre-line; text-shadow:0 0 10px rgba(0,255,160,.25) }
-  @media(max-width:900px){ :root{ --rail-w: 200px; } }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alien Solar Portfolio</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- RIGHT code-like rail -->
-  <aside class="rail">
-    <div class="brand">&gt; SAMUEL_GOLDMAN :: PORTFOLIO</div>
-    <div class="divider"></div>
-    <div class="vnav">
-      <button data-key="start"   class="active">[0]  SAMUEL_GOLDMAN</button>
-      <button data-key="work">[1]  WORK</button>
-      <button data-key="about">[2]  ABOUT</button>
-      <button data-key="contact">[3]  CONTACT</button>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="alien-loader"></div>
+            <p>Initializing Solar System...</p>
+        </div>
     </div>
-    <div class="divider"></div>
-    <div class="status">drag or scroll to orbit • title is static • dense particles • darker nebula</div>
-  </aside>
 
-<script type="module">
-import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
+    <!-- Navigation -->
+    <nav id="navbar">
+        <div class="nav-brand">Portfolio</div>
+        <ul class="nav-links">
+            <li><a href="#home" data-section="home">Home</a></li>
+            <li><a href="#about" data-section="about">About</a></li>
+            <li><a href="#projects" data-section="projects">Projects</a></li>
+            <li><a href="#contact" data-section="contact">Contact</a></li>
+        </ul>
+    </nav>
 
-/* ================= CONFIG ================= */
-const CONFIG = {
-  // Dense clouds & titles
-  AMBIENT_COUNT: 100000,     // larger colorful ambient cloud
-  SWARM_COUNT:    40000,     // ring near titles
-  SHAPE_COUNT:   120000,     // very dense title fill
-  BOX: 260,
-  BASE_SPEED: 0.032,
-  DAMPING: 0.985,
+    <!-- Three.js Canvas -->
+    <canvas id="three-canvas"></canvas>
 
-  // Camera / orbit (camera moves, title stays static)
-  CAMERA_FOV: 60,
-  ORBIT_RADIUS: 240,         // farther back = safer fit
-  ORBIT_DAMP:  0.12,
-  ORBIT_SENS:  { theta: 0.008, phi: 0.006 },
-  PHI_MIN: 0.35, PHI_MAX: Math.PI - 0.35,
+    <!-- Content Overlay -->
+    <div id="content-overlay">
+        <!-- Home Section -->
+        <section id="home" class="content-section active">
+            <div class="hero-content">
+                <h1 class="glitch-text">Welcome to the Solar Dimension</h1>
+                <p class="alien-text">Interactive Developer & Digital Explorer</p>
+                <button class="cta-button" id="explore-btn">Explore the Universe</button>
+            </div>
+        </section>
 
-  // Text sampling & fit
-  CANVAS_W: 3600,
-  STEP: 2,                    // 1 = ultra dense, 2 = very dense (good perf)
-  THICKNESS: 6,               // depth jitter
-  SCALE_PAD: 0.78,            // stronger safety (no clipping)
-  TEXT_MARGIN: 0.80,          // margin factor (no clipping)
+        <!-- About Section -->
+        <section id="about" class="content-section">
+            <div class="section-content">
+                <h2>About the Explorer</h2>
+                <p>A digital architect crafting immersive experiences across dimensions.</p>
+                <div class="skills-grid">
+                    <div class="skill-orb">JavaScript</div>
+                    <div class="skill-orb">Three.js</div>
+                    <div class="skill-orb">React</div>
+                    <div class="skill-orb">WebGL</div>
+                </div>
+            </div>
+        </section>
 
-  // “Welcome” subtitle under START
-  SUB_SCALE: 0.50,
-  SUB_GAP:   0.22,
+        <!-- Projects Section -->
+        <section id="projects" class="content-section">
+            <div class="section-content">
+                <h2>Cosmic Projects</h2>
+                <div class="projects-grid">
+                    <div class="project-card" data-planet="1">
+                        <h3>Solar Web App</h3>
+                        <p>Interactive solar system visualization</p>
+                    </div>
+                    <div class="project-card" data-planet="2">
+                        <h3>Alien Interface</h3>
+                        <p>Futuristic UI/UX design system</p>
+                    </div>
+                    <div class="project-card" data-planet="3">
+                        <h3>Quantum Portfolio</h3>
+                        <p>This very website you're exploring</p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-  // Title “life” (subtle)
-  JITTER_AMP: 0.35,
-  JITTER_SPEED: 1.0,
+        <!-- Contact Section -->
+        <section id="contact" class="content-section">
+            <div class="section-content">
+                <h2>Establish Contact</h2>
+                <div class="contact-links">
+                    <a href="#" class="contact-link">Email</a>
+                    <a href="#" class="contact-link">GitHub</a>
+                    <a href="#" class="contact-link">LinkedIn</a>
+                </div>
+            </div>
+        </section>
+    </div>
 
-  // Mouse field (ambient reacts)
-  FIELD_RADIUS: 26,
-  FIELD_FORCE:  0.34,
-};
+    <!-- Interactive UI -->
+    <div id="ui-elements">
+        <div class="planet-info" id="planet-info">
+            <h3 id="planet-name">Solar System</h3>
+            <p id="planet-description">Click on planets to explore projects</p>
+        </div>
+        
+        <div class="controls">
+            <button id="auto-rotate" class="control-btn">Auto Rotate</button>
+            <button id="reset-camera" class="control-btn">Reset View</button>
+        </div>
+    </div>
 
-/* ================= SCENE ================= */
-const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x000102, 0.0052);
-
-const camera = new THREE.PerspectiveCamera(
-  CONFIG.CAMERA_FOV,
-  Math.max(innerWidth,1)/Math.max(innerHeight,1),
-  0.1, 12000
-);
-
-// pivot = orbit center for camera; will be aligned to the title position
-const pivot = new THREE.Object3D(); scene.add(pivot);
-const camHolder = new THREE.Object3D();
-camHolder.position.set(0,0,CONFIG.ORBIT_RADIUS);
-pivot.add(camHolder); camHolder.add(camera);
-
-const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:"high-performance" });
-renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setClearColor(0x000204, 1);
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.65;  // darker overall
-document.body.appendChild(renderer.domElement);
-
-scene.add(new THREE.AmbientLight(0x0a120f, 1));
-
-/* Title stage (static), will face camera only initially */
-const stage = new THREE.Object3D(); scene.add(stage);
-
-/* ================= TIE-DYE FRACTAL BACKGROUND (darker) ================= */
-const nebulaUniforms = { uTime:{value:0}, uHueShift:{value:0.0}, uIntensity:{value:0.38} };
-const nebulaMat = new THREE.ShaderMaterial({
-  side: THREE.BackSide, uniforms: nebulaUniforms,
-  vertexShader: `varying vec3 vPos; void main(){ vPos=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);} `,
-  fragmentShader: `
-    precision highp float; varying vec3 vPos; uniform float uTime, uHueShift, uIntensity;
-    float hash(vec3 p){ return fract(sin(dot(p, vec3(17.1,113.5,27.9))) * 43758.5453123); }
-    float noise(vec3 p){ vec3 i=floor(p), f=fract(p);
-      float n = mix(mix(mix(hash(i+vec3(0,0,0)), hash(i+vec3(1,0,0)), f.x),
-                        mix(hash(i+vec3(0,1,0)), hash(i+vec3(1,1,0)), f.x), f.y),
-                    mix(mix(hash(i+vec3(0,0,1)), hash(i+vec3(1,0,1)), f.x),
-                        mix(hash(i+vec3(0,1,1)), hash(i+vec3(1,1,1)), f.x), f.y), f.z);
-      return n;
-    }
-    float fbm(vec3 p){ float f=0., a=0.55; for(int i=0;i<6;i++){ f += a*noise(p); p = p*2.02 + vec3(.13,.11,-.17); a *= .55; } return f; }
-    vec3 hsl2rgb(vec3 hsl){ float h=hsl.x,s=hsl.y,l=hsl.z; float c=(1.-abs(2.*l-1.))*s; float x=c*(1.-abs(mod(h*6.,2.)-1.)); float m=l-.5*c;
-      vec3 rgb; if(h<1./6.) rgb=vec3(c,x,0.); else if(h<2./6.) rgb=vec3(x,c,0.); else if(h<3./6.) rgb=vec3(0.,c,x);
-      else if(h<4./6.) rgb=vec3(0.,x,c); else if(h<5./6.) rgb=vec3(x,0.,c); else rgb=vec3(c,0.,x); return rgb + m; }
-    void main(){
-      vec3 p = normalize(vPos)*2.0;
-      float f = fbm(p*2.0 + vec3(0.,0.,uTime*0.02));
-      float bands = sin((p.x+p.y+p.z)*4.0 + uTime*0.10) * .5 + .5;
-      float hue = fract(bands*0.8 + f*0.3 + uHueShift);
-      vec3 col = hsl2rgb(vec3(hue, 0.80, 0.22 + 0.24*(f)));
-      col = mix(vec3(0.0), col, uIntensity);
-      gl_FragColor = vec4(col, 1.0);
-    }`
-});
-const nebula = new THREE.Mesh(new THREE.SphereGeometry(5600,64,64), nebulaMat);
-scene.add(nebula);
-
-/* ================= DOT TEXTURE (bright core + glow) ================= */
-function makeDotTexture(size=128){
-  const c=document.createElement("canvas"); c.width=c.height=size; const g=c.getContext("2d");
-  const r=size/2, grad=g.createRadialGradient(r,r,0,r,r,r);
-  grad.addColorStop(0.00,"rgba(255,255,255,1)");
-  grad.addColorStop(0.50,"rgba(255,255,255,1)");
-  grad.addColorStop(0.76,"rgba(160,255,220,.55)");
-  grad.addColorStop(1.00,"rgba(160,255,220,0)");
-  g.fillStyle=grad; g.beginPath(); g.arc(r,r,r,0,Math.PI*2); g.fill();
-  const tex=new THREE.CanvasTexture(c);
-  tex.colorSpace=THREE.SRGBColorSpace; tex.minFilter=THREE.LinearFilter; tex.magFilter=THREE.LinearFilter; tex.generateMipmaps=false;
-  return tex;
-}
-const dotTex = makeDotTexture();
-
-/* ================= HELPERS ================= */
-const rnd=(a,b)=>a+Math.random()*(b-a);
-const hsl = (h,s,l)=>{
-  let r,g,b; if(s===0){ r=g=b=l; } else {
-    const hue2rgb=(p,q,t)=>{ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p; };
-    const q = l < 0.5 ? l*(1+s) : l + s - l*s; const p = 2*l - q;
-    r=hue2rgb(p,q,h+1/3); g=hue2rgb(p,q,h); b=hue2rgb(p,q,h-1/3);
-  } return [r,g,b];
-};
-
-/* ================= AMBIENT CLOUD (lots of light, vibrant colors) ================= */
-const ambCount = CONFIG.AMBIENT_COUNT;
-const ambPos = new Float32Array(ambCount*3);
-const ambCol = new Float32Array(ambCount*3);
-const ambVel = new Float32Array(ambCount*3);
-for(let i=0;i<ambCount;i++){
-  const j=i*3;
-  ambPos[j+0]=rnd(-CONFIG.BOX,CONFIG.BOX);
-  ambPos[j+1]=rnd(-CONFIG.BOX,CONFIG.BOX);
-  ambPos[j+2]=rnd(-800,800);
-  ambVel[j+0]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
-  ambVel[j+1]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
-  ambVel[j+2]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
-  const hue=Math.random();
-  const [r,g,b]=hsl(hue, 0.95, 0.82 + Math.random()*0.12);  // lighter, vibrant
-  ambCol[j+0]=r; ambCol[j+1]=g; ambCol[j+2]=b;
-}
-const ambGeom = new THREE.BufferGeometry();
-ambGeom.setAttribute("position", new THREE.BufferAttribute(ambPos,3));
-ambGeom.setAttribute("color",    new THREE.BufferAttribute(ambCol,3));
-const ambMat = new THREE.PointsMaterial({
-  size:0.36, map:dotTex, transparent:true, opacity:0.98, depthWrite:false,
-  blending:THREE.AdditiveBlending, vertexColors:true
-});
-const ambientPoints = new THREE.Points(ambGeom, ambMat);
-scene.add(ambientPoints);
-
-/* ================= SWARM RING (near titles) ================= */
-const swarmCount=CONFIG.SWARM_COUNT;
-const swarmPos=new Float32Array(swarmCount*3);
-const swarmCol=new Float32Array(swarmCount*3);
-const swarmTheta=new Float32Array(swarmCount);
-const swarmRad=new Float32Array(swarmCount);
-const swarmSpeed=new Float32Array(swarmCount);
-const swarmYOff=new Float32Array(swarmCount);
-for(let i=0;i<swarmCount;i++){
-  const j=i*3; const r=rnd(28, 130), th=rnd(0,Math.PI*2), sp=rnd(0.05,0.22), yoff=rnd(-30,30);
-  swarmRad[i]=r; swarmTheta[i]=th; swarmSpeed[i]=sp; swarmYOff[i]=yoff;
-  swarmPos[j+0]=Math.cos(th)*r; swarmPos[j+1]=yoff; swarmPos[j+2]=Math.sin(th)*r;
-  const hue=Math.random(); const [rc,gc,bc]=hsl(hue, 0.98, 0.78);
-  swarmCol[j+0]=rc; swarmCol[j+1]=gc; swarmCol[j+2]=bc;
-}
-const swarmGeom=new THREE.BufferGeometry();
-swarmGeom.setAttribute("position", new THREE.BufferAttribute(swarmPos,3));
-swarmGeom.setAttribute("color",    new THREE.BufferAttribute(swarmCol,3));
-const swarmMat=new THREE.PointsMaterial({
-  size:0.36, map:dotTex, transparent:true, opacity:0.98, depthWrite:false,
-  blending:THREE.AdditiveBlending, vertexColors:true
-});
-const swarmPoints=new THREE.Points(swarmGeom,swarmMat);
-stage.add(swarmPoints);
-
-/* ================= TITLE PARTICLES (very dense + subtle life) ================= */
-const shapeCount=CONFIG.SHAPE_COUNT;
-const pos=new Float32Array(shapeCount*3);
-const vel=new Float32Array(shapeCount*3);
-const col=new Float32Array(shapeCount*3);
-const targets=new Float32Array(shapeCount*3);
-const phase=new Float32Array(shapeCount);
-for(let i=0;i<shapeCount;i++){
-  const j=i*3;
-  pos[j+0]=rnd(-CONFIG.BOX*0.5,CONFIG.BOX*0.5);
-  pos[j+1]=rnd(-CONFIG.BOX*0.5,CONFIG.BOX*0.5);
-  pos[j+2]=rnd(-80,80);
-  vel[j+0]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
-  vel[j+1]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
-  vel[j+2]=rnd(-CONFIG.BASE_SPEED,CONFIG.BASE_SPEED);
-  const hue=Math.random(); const [rc,gc,bc]=hsl(hue, 1.0, 0.86);
-  col[j+0]=rc; col[j+1]=gc; col[j+2]=bc;
-  phase[i]=Math.random()*Math.PI*2;
-}
-const shapeGeom=new THREE.BufferGeometry();
-shapeGeom.setAttribute("position", new THREE.BufferAttribute(pos,3));
-shapeGeom.setAttribute("color",    new THREE.BufferAttribute(col,3));
-const shapeMat=new THREE.PointsMaterial({
-  size:0.56, map:dotTex, transparent:true, opacity:1.0, depthWrite:false,
-  blending:THREE.AdditiveBlending, vertexColors:true
-});
-const shapePoints=new THREE.Points(shapeGeom,shapeMat);
-stage.add(shapePoints);
-const morphState={progress:1};
-
-/* ================= RIGHT-RAIL SAFE FIT (NO CLIP; centered in visible area) ================= */
-function planeWorldWidth(){
-  const h = Math.max(innerHeight, 1);
-  const w = Math.max(innerWidth, 1);
-  const f = THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV);
-  return 2*CONFIG.ORBIT_RADIUS*Math.tan(f/2)*(w/h);
-}
-function planeWorldHeight(){
-  const h = Math.max(innerHeight, 1);
-  const f = THREE.MathUtils.degToRad(CONFIG.CAMERA_FOV);
-  return 2*CONFIG.ORBIT_RADIUS*Math.tan(f/2);
-}
-function safeArea(){
-  const railPx=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rail-w'))||240;
-  const worldPerPx=planeWorldWidth()/Math.max(innerWidth,1);
-  const railW=railPx*worldPerPx;
-
-  // Visible (non-rail) world width, and center of that region
-  const visibleW = planeWorldWidth() - railW;
-  const centerX  = -railW/2;                     // center in the visible area
-
-  // Generous safety margins to avoid clipping anywhere
-  const safeW = Math.max(28, visibleW) * CONFIG.TEXT_MARGIN;
-  const safeH = Math.max(12, planeWorldHeight()) * CONFIG.TEXT_MARGIN;
-
-  return { safeW, safeH, centerX };
-}
-
-/* ================= TEXT SAMPLING (accurate bounds + dense points) ================= */
-function sampleText(text){
-  const W=CONFIG.CANVAS_W, H=Math.round(W*0.22);
-  const cnv=document.createElement("canvas"); cnv.width=W; cnv.height=H;
-  const ctx=cnv.getContext("2d");
-  ctx.clearRect(0,0,W,H);
-  ctx.fillStyle="#fff";
-  ctx.font=`900 ${Math.round(H*0.78)}px "Orbitron", system-ui, Arial`;
-  ctx.textAlign="center"; ctx.textBaseline="middle";
-  ctx.fillText(text, W/2, H/2);
-  const img=ctx.getImageData(0,0,W,H).data;
-
-  // Accurate bounds @ step=1
-  let xmin=W, xmax=0, ymin=H, ymax=0;
-  for(let y=0;y<H;y++){
-    for(let x=0;x<W;x++){
-      if(img[(y*W+x)*4+3]>0){ if(x<xmin)xmin=x; if(x>xmax)xmax=x; if(y<ymin)ymin=y; if(y>ymax)ymax=y; }
-    }
-  }
-  // fallback if draw failed
-  if(xmin>xmax || ymin>ymax){ xmin=W*0.4; xmax=W*0.6; ymin=H*0.4; ymax=H*0.6; }
-
-  const cx=(xmin+xmax)/2, cy=(ymin+ymax)/2;
-  const wNorm=Math.max((xmax-xmin)/W, 1e-4), hNorm=Math.max((ymax-ymin)/W, 1e-4);
-
-  const pts=[]; const step=Math.max(1, CONFIG.STEP|0);
-  for(let y=ymin;y<=ymax;y+=step){
-    for(let x=xmin;x<=xmax;x+=step){
-      if(img[(y*W+x)*4+3]>128) pts.push([x,y]);
-    }
-  }
-  // ensure non-empty pool
-  if(pts.length===0){
-    for(let i=0;i<2000;i++){
-      pts.push([xmin + Math.random()*(xmax-xmin), ymin + Math.random()*(ymax-ymin)]);
-    }
-  }
-
-  const normPts = pts.map(([x,y])=>[(x-cx)/W, (cy-y)/W]);
-  return { normPts, wNorm, hNorm };
-}
-
-const NORM={};
-const SECT={ START:0, WORK:1, ABOUT:2, CONTACT:3 };
-let section=SECT.START;
-
-async function prepareText(){
-  try{
-    if (document.fonts && document.fonts.load) {
-      await document.fonts.load('900 120px "Orbitron"');
-      await document.fonts.ready;
-    }
-  }catch(e){}
-  NORM.main = sampleText("Samuel Goldman");
-  NORM.sub  = sampleText("Welcome");
-  NORM.work = sampleText("Work");
-  NORM.about= sampleText("About");
-  NORM.contact=sampleText("Contact");
-  assignTargetsFor(section, /*alignNow=*/true);
-  // second pass (font metrics settling)
-  setTimeout(()=>{
-    NORM.main = sampleText("Samuel Goldman");
-    NORM.sub  = sampleText("Welcome");
-    NORM.work = sampleText("Work");
-    NORM.about= sampleText("About");
-    NORM.contact=sampleText("Contact");
-    assignTargetsFor(section, /*alignNow=*/true);
-  }, 350);
-}
-
-function assignTargetsFor(idx, alignNow=false){
-  const { safeW, safeH, centerX } = safeArea();
-
-  // Place title centered in visible area (not under the rail)
-  stage.position.set(centerX, 0, 0);
-
-  // Camera orbits around the title center
-  pivot.position.copy(stage.position);
-
-  // At section load, face the camera ONCE (then stay static)
-  if (alignNow){
-    stage.lookAt(camera.position);
-  }
-
-  let pool=[];
-  if(idx===SECT.START){
-    const M=NORM.main, S=NORM.sub; if(!M||!S) return;
-    const subRel=CONFIG.SUB_SCALE;
-    const combinedW=Math.max(M.wNorm, S.wNorm*subRel);
-    const combinedH = M.hNorm + (M.hNorm*CONFIG.SUB_GAP) + (S.hNorm*subRel);
-    const baseScale=Math.min(safeW/combinedW, safeH/combinedH);
-    const scale=CONFIG.SCALE_PAD*baseScale;
-
-    const mainScale=scale, subScale=scale*subRel;
-    const mainH=M.hNorm*mainScale, subH=S.hNorm*subScale, gap=M.hNorm*CONFIG.SUB_GAP*scale;
-    const mainY=(subH+gap)/2, subY=-(mainH+gap)/2;
-    const jit=CONFIG.THICKNESS*2;
-
-    for(const t of M.normPts){ pool.push([t[0]*mainScale, t[1]*mainScale + mainY, (Math.random()-0.5)*jit]); }
-    for(const t of S.normPts){ pool.push([t[0]*subScale,  t[1]*subScale  + subY,  (Math.random()-0.5)*jit]); }
-  }else{
-    const MAP=[null,NORM.work,NORM.about,NORM.contact];
-    const D=MAP[idx]; if(!D) return;
-    const baseScale=Math.min(safeW/D.wNorm, safeH/D.hNorm);
-    const scale=CONFIG.SCALE_PAD*baseScale;
-    const jit=CONFIG.THICKNESS*2;
-    for(const t of D.normPts){ pool.push([t[0]*scale, t[1]*scale, (Math.random()-0.5)*jit]); }
-  }
-
-  // Guard: if pool is empty, seed a tiny cluster
-  if (!pool || pool.length === 0) {
-    const jit = CONFIG.THICKNESS*2;
-    for (let i=0;i<2000;i++){
-      pool.push([(Math.random()-0.5)*4, (Math.random()-0.5)*1.6, (Math.random()-0.5)*jit]);
-    }
-  }
-
-  // Assign targets (with replacement) from pool (NaN-safe)
-  for(let i=0;i<shapeCount;i++){
-    const j=i*3;
-    const p = pool[(Math.random()*pool.length|0)] || [0,0,0];
-    targets[j+0]=Number.isFinite(p[0]) ? p[0] : 0;
-    targets[j+1]=Number.isFinite(p[1]) ? p[1] : 0;
-    targets[j+2]=Number.isFinite(p[2]) ? p[2] : 0;
-  }
-  morphState.progress=0;
-}
-
-/* ================= CAMERA ORBIT (scroll/drag; title stays static) ================= */
-let theta=0, phi=Math.PI/2, tTheta=0, tPhi=Math.PI/2, dragging=false, lastX=0, lastY=0;
-function updateCamera(){
-  theta += (tTheta - theta) * CONFIG.ORBIT_DAMP;
-  phi   += (tPhi   - phi)   * CONFIG.ORBIT_DAMP;
-  const r=CONFIG.ORBIT_RADIUS;
-  const x=r*Math.sin(phi)*Math.sin(theta), y=r*Math.cos(phi), z=r*Math.sin(phi)*Math.cos(theta);
-  camHolder.position.set(x,y,z);
-  camera.lookAt(stage.position);
-  // NOTE: we DO NOT re-orient the stage here -> stays static while you orbit
-
-  // Subtle hue shift as you orbit
-  nebulaUniforms.uHueShift.value = (theta/(Math.PI*2)) % 1.0;
-}
-addEventListener('wheel', (e)=>{
-  e.preventDefault();
-  tTheta -= e.deltaY * 0.0018;           // horizontal orbit
-  if(e.shiftKey){ tPhi -= e.deltaY * 0.0012; tPhi = THREE.MathUtils.clamp(tPhi, CONFIG.PHI_MIN, CONFIG.PHI_MAX); }
-}, { passive:false });
-addEventListener('pointerdown',(e)=>{ if(e.target.closest('.rail')) return; dragging=true; lastX=e.clientX; lastY=e.clientY; });
-addEventListener('pointermove',(e)=>{ if(!dragging) return; const dx=e.clientX-lastX, dy=e.clientY-lastY; tTheta -= dx*CONFIG.ORBIT_SENS.theta; tPhi -= dy*CONFIG.ORBIT_SENS.phi; tPhi = THREE.MathUtils.clamp(tPhi, CONFIG.PHI_MIN, CONFIG.PHI_MAX); lastX=e.clientX; lastY=e.clientY; });
-addEventListener('pointerup',()=>{ dragging=false; });
-
-/* ================= MOUSE FIELD (ambient reacts on title plane) ================= */
-const raycaster=new THREE.Raycaster();
-let mouseNDC=new THREE.Vector2();
-let fieldPos=new THREE.Vector3();
-addEventListener("pointermove",(e)=>{ const r=renderer.domElement.getBoundingClientRect(); mouseNDC.x=((e.clientX-r.left)/r.width)*2-1; mouseNDC.y=-((e.clientY-r.top)/r.height)*2+1; });
-function updateMouseField(){
-  const dir=new THREE.Vector3(); camera.getWorldDirection(dir);
-  const plane=new THREE.Plane().setFromNormalAndCoplanarPoint(dir, stage.position);
-  raycaster.setFromCamera(mouseNDC, camera);
-  const out = raycaster.ray.intersectPlane(plane, fieldPos);
-  if(!out){ fieldPos.copy(stage.position); } // guard if no intersection
-}
-
-/* ================= NAV (right menu) ================= */
-function setSection(to){
-  section=to;
-  const keys=["start","work","about","contact"];
-  document.querySelectorAll('.vnav button').forEach(b=>b.classList.toggle('active', b.dataset.key===keys[section]));
-  assignTargetsFor(section, /*alignNow=*/true); // face camera at the moment of switch
-}
-document.querySelectorAll('.vnav button').forEach(btn=>{
-  btn.addEventListener('click', ()=> setSection({start:0,work:1,about:2,contact:3}[btn.dataset.key]));
-});
-addEventListener('keydown',(e)=>{
-  if(e.key==='ArrowRight'||e.key==='PageDown') setSection(Math.min(3, section+1));
-  if(e.key==='ArrowLeft' ||e.key==='PageUp')   setSection(Math.max(0, section-1));
-});
-
-/* ================= ANIMATE ================= */
-const ambPosAttr=ambGeom.attributes.position;
-const swarmPosAttr=swarmGeom.attributes.position;
-const shapePosAttr=shapeGeom.attributes.position;
-const clock=new THREE.Clock();
-
-function animate(){
-  requestAnimationFrame(animate);
-  const dt=Math.min(0.05, clock.getDelta());
-  nebulaUniforms.uTime.value += dt;        // slow background drift
-
-  updateCamera(); updateMouseField();
-
-  // Ambient motion + mouse influence + toroidal wrap + NaN guard
-  const r2=CONFIG.FIELD_RADIUS*CONFIG.FIELD_RADIUS;
-  for(let i=0;i<ambCount;i++){
-    const j=i*3;
-    ambVel[j+0]=ambVel[j+0]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
-    ambVel[j+1]=ambVel[j+1]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
-    ambVel[j+2]=ambVel[j+2]*CONFIG.DAMPING + (Math.random()-0.5)*CONFIG.BASE_SPEED*0.02;
-    const dx=ambPos[j+0]-fieldPos.x, dy=ambPos[j+1]-fieldPos.y, dz=ambPos[j+2]-fieldPos.z;
-    const d2=dx*dx+dy*dy+dz*dz; if(d2<r2){ const f=(1-d2/r2)*CONFIG.FIELD_FORCE; ambVel[j+0]+=dx*f*dt*30; ambVel[j+1]+=dy*f*dt*30; ambVel[j+2]+=dz*f*dt*30; }
-    ambPos[j+0]+=ambVel[j+0]; ambPos[j+1]+=ambVel[j+1]; ambPos[j+2]+=ambVel[j+2];
-    const B=CONFIG.BOX, Zmin=-800, Zmax=800;
-    if(ambPos[j+0]<-B) ambPos[j+0]+=2*B; else if(ambPos[j+0]>B) ambPos[j+0]-=2*B;
-    if(ambPos[j+1]<-B) ambPos[j+1]+=2*B; else if(ambPos[j+1]>B) ambPos[j+1]-=2*B;
-    if(ambPos[j+2]<Zmin) ambPos[j+2]=Zmax; else if(ambPos[j+2]>Zmax) ambPos[j+2]=Zmin;
-    if(!Number.isFinite(ambPos[j+0])||!Number.isFinite(ambPos[j+1])||!Number.isFinite(ambPos[j+2])){ ambPos[j+0]=0;ambPos[j+1]=0;ambPos[j+2]=0; ambVel[j+0]=ambVel[j+1]=ambVel[j+2]=0; }
-  }
-  ambPosAttr.needsUpdate=true;
-
-  // Swarm ring wave + NaN guard
-  for(let i=0;i<swarmCount;i++){
-    const j=i*3; swarmTheta[i]+=swarmSpeed[i]*0.01;
-    const r = swarmRad[i]*(1.0+0.06*Math.sin(swarmTheta[i]*1.7+i*0.13));
-    swarmPos[j+0]=Math.cos(swarmTheta[i])*r;
-    swarmPos[j+1]=swarmYOff[i]*(1.0 + 0.25*Math.sin(swarmTheta[i]*0.7 + i*0.09));
-    swarmPos[j+2]=Math.sin(swarmTheta[i])*r*0.7;
-    if(!Number.isFinite(swarmPos[j+0])||!Number.isFinite(swarmPos[j+1])||!Number.isFinite(swarmPos[j+2])){ swarmPos[j+0]=0;swarmPos[j+1]=0;swarmPos[j+2]=0; }
-  }
-  swarmPosAttr.needsUpdate=true;
-
-  // Morph to current title + subtle “living” jitter + NaN guard
-  const t = performance.now()*0.001*CONFIG.JITTER_SPEED;
-  if(morphState.progress<1) morphState.progress=Math.min(1, morphState.progress+0.04);
-  for(let i=0;i<shapeCount;i++){
-    const j=i*3, m=morphState.progress, ph=phase[i];
-    const jx = Math.sin(t + ph*1.17) * CONFIG.JITTER_AMP;
-    const jy = Math.cos(t*0.9 + ph*1.07) * CONFIG.JITTER_AMP;
-    const jz = Math.sin(t*1.3 + ph*0.73) * CONFIG.JITTER_AMP*0.6;
-    const bx = targets[j+0] + jx;
-    const by = targets[j+1] + jy;
-    const bz = targets[j+2] + jz;
-    vel[j+0]=vel[j+0]*CONFIG.DAMPING + (bx - pos[j+0])*0.022*m;
-    vel[j+1]=vel[j+1]*CONFIG.DAMPING + (by - pos[j+1])*0.022*m;
-    vel[j+2]=vel[j+2]*CONFIG.DAMPING + (bz - pos[j+2])*0.022*m;
-    if(m===1){ vel[j+0]*=0.94; vel[j+1]*=0.94; vel[j+2]*=0.94; }
-    pos[j+0]+=vel[j+0]; pos[j+1]+=vel[j+1]; pos[j+2]+=vel[j+2];
-    if(!Number.isFinite(pos[j+0])||!Number.isFinite(pos[j+1])||!Number.isFinite(pos[j+2])){ pos[j+0]=0;pos[j+1]=0;pos[j+2]=0; vel[j+0]=vel[j+1]=vel[j+2]=0; }
-  }
-  shapePosAttr.needsUpdate=true;
-
-  renderer.render(scene,camera);
-}
-animate();
-
-/* ================= INIT TEXT & RESIZE ================= */
-prepareText();
-addEventListener("resize",()=>{
-  camera.aspect=Math.max(innerWidth,1)/Math.max(innerHeight,1);
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
-  assignTargetsFor(section, /*alignNow=*/true); // re-center for new viewport
-});
-</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="main.js"></script>
 </body>
 </html>
