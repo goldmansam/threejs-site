@@ -1,83 +1,116 @@
-/* --- Global --- */
-body,html {
-  margin:0; padding:0;
-  height:100%;
-  font-family: "Work Sans", sans-serif;
-  color:#eee;
-  background: #0a0f14;
-  overflow-x:hidden;
-  scroll-behavior:smooth;
-}
-section {
-  height:100vh;
-  position:relative;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  overflow:hidden;
-}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hopper Forest — Doors</title>
+  <meta name="description" content="Cinematic 2D scroll through a whimsical forest to a clearing with three glowing doors." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Work+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar" role="banner">
+    <div class="brand">Hopper Forest</div>
+    <nav aria-label="Primary">
+      <a href="#clearing">Doors</a>
+      <a href="#about">About</a>
+    </nav>
+  </header>
 
-/* --- Forest layers --- */
-.forest {
-  background: linear-gradient(#0a0f14 0%, #10202f 100%);
-}
-.layer1 .trees {
-  position:absolute; inset:0;
-  background: repeating-linear-gradient(90deg,#1a2a34 0 5px, transparent 5px 60px);
-  opacity:0.4;
-}
-.layer2 .hill {
-  position:absolute; bottom:-10%;
-  width:200%; height:60%;
-  background: radial-gradient(circle at 50% 100%, #234 0%, #123 80%);
-  border-radius:50%;
-}
+  <!-- Intro / establishing scene -->
+  <section class="scene scene--intro" aria-label="Forest entry">
+    <div class="layer sky"></div>
+    <div class="layer haze"></div>
+    <div class="layer silhouettes"></div>
+    <div class="layer trunks"></div>
+    <div class="layer foreground"></div>
+    <div class="copy">
+      <h1>Windows into my work</h1>
+      <p>Scroll through the quiet. Follow the light. Choose a door.</p>
+      <div class="hint">Scroll ↓</div>
+    </div>
+  </section>
 
-/* --- Fog / light --- */
-.fog {
-  position:absolute; inset:0;
-  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.1), transparent 70%);
-  mix-blend-mode: screen;
-}
+  <!-- Glide / deeper forest -->
+  <section class="scene scene--glide" aria-label="Moving through the forest">
+    <div class="layer sky"></div>
+    <div class="layer rays"></div>
+    <div class="layer silhouettes"></div>
+    <div class="layer midhills"></div>
+    <div class="layer trunks"></div>
+    <div class="layer foreground"></div>
+  </section>
 
-/* --- Clearing --- */
-.clearing {
-  background: linear-gradient(#15252f, #203840);
-}
-.door {
-  width:120px; height:240px;
-  margin:0 40px;
-  background: #333;
-  border:6px solid #111;
-  box-shadow: 0 0 25px rgba(0,0,0,.6);
-  position:relative;
-  transition: transform .3s, box-shadow .3s;
-}
-.door::after {
-  content:"";
-  position:absolute; top:50%; right:15px;
-  width:15px; height:15px;
-  border-radius:50%; background:#222;
-}
-.door:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 0 30px rgba(255,220,150,.6);
-}
+  <!-- Pinned clearing with doors -->
+  <section id="clearing" class="pin-wrap" aria-label="Clearing with doors">
+    <div class="pin">
+      <div class="layer sky sky--bright"></div>
+      <div class="layer rays rays--wide"></div>
+      <div class="layer clearing-hills"></div>
 
-/* Colors per door */
-.yellow { background:#dcb04a; }
-.red    { background:#a43a2a; }
-.blue   { background:#2d4da1; }
+      <div class="doors" role="list" aria-label="Choose a door">
+        <button class="door door--yellow" role="listitem" aria-controls="panel-yellow" aria-expanded="false">
+          <span class="door__label">Liminal</span>
+        </button>
+        <button class="door door--red" role="listitem" aria-controls="panel-red" aria-expanded="false">
+          <span class="door__label">Identity</span>
+        </button>
+        <button class="door door--blue" role="listitem" aria-controls="panel-blue" aria-expanded="false">
+          <span class="door__label">Web</span>
+        </button>
+      </div>
 
-/* --- Outro --- */
-.outro {
-  background:#0a0f14;
-}
-.outro h1 {
-  font-family:"Playfair Display", serif;
-  font-size:2.4rem;
-  color:#f5f5f5;
-  text-shadow:0 0 20px rgba(255,255,255,.1);
-}
+      <div class="hint hint--pin">Click a door • Move mouse to tilt • Press ESC to close</div>
+    </div>
+  </section>
+
+  <!-- Panels (case studies) -->
+  <section class="panel" id="panel-yellow" aria-modal="true" role="dialog" aria-labelledby="panel-yellow-title">
+    <div class="panel__inner">
+      <header class="panel__head">
+        <h2 id="panel-yellow-title">Project A — Liminal Interactive</h2>
+        <button class="panel__close" data-close>Close</button>
+      </header>
+      <p>A quiet interface for reflective moments. Cinematic light, minimal UI, gentle motion.</p>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-red" aria-modal="true" role="dialog" aria-labelledby="panel-red-title">
+    <div class="panel__inner">
+      <header class="panel__head">
+        <h2 id="panel-red-title">Project B — Identity & Motion</h2>
+        <button class="panel__close" data-close>Close</button>
+      </header>
+      <p>Brand system with typographic rhythm and logo motion studies grounded in place.</p>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-blue" aria-modal="true" role="dialog" aria-labelledby="panel-blue-title">
+    <div class="panel__inner">
+      <header class="panel__head">
+        <h2 id="panel-blue-title">Project C — Web Experience</h2>
+        <button class="panel__close" data-close>Close</button>
+      </header>
+      <p>Presence-first web UX: finite feeds, warm affordances, and dignified pacing.</p>
+    </div>
+  </section>
+
+  <!-- Outro -->
+  <section id="about" class="scene scene--outro" aria-label="About">
+    <div class="copy">
+      <h2>About the work</h2>
+      <p>Inspired by Edward Hopper’s light and quiet, these projects aim for presence over performance.</p>
+    </div>
+  </section>
+
+  <footer class="footer" role="contentinfo">
+    <small>© <span id="year"></span> Sam Goldman</small>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
 
 
