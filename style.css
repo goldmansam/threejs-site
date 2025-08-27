@@ -1,0 +1,10 @@
+// Simple parallax effect
+window.addEventListener('scroll', () => {
+  const scroll = window.scrollY;
+  document.querySelectorAll('.fog').forEach((fog,i)=>{
+    fog.style.transform = `translateY(${scroll * (0.1 + i*0.05)}px)`;
+  });
+  document.querySelectorAll('.trees').forEach((trees,i)=>{
+    trees.style.transform = `translateY(${scroll * (0.2+i*0.05)}px)`;
+  });
+});
