@@ -3,106 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alien Solar Portfolio</title>
+    <title>Liminal Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Space+Grotesk:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Loading Screen -->
     <div id="loading-screen">
         <div class="loading-content">
-            <div class="alien-loader"></div>
-            <p>Initializing Solar System...</p>
+            <div class="loading-bar"></div>
+            <p class="loading-text">ENTERING LIMINAL SPACE...</p>
         </div>
     </div>
-
-    <!-- Navigation -->
-    <nav id="navbar">
-        <div class="nav-brand">Portfolio</div>
-        <ul class="nav-links">
-            <li><a href="#home" data-section="home">Home</a></li>
-            <li><a href="#about" data-section="about">About</a></li>
-            <li><a href="#projects" data-section="projects">Projects</a></li>
-            <li><a href="#contact" data-section="contact">Contact</a></li>
-        </ul>
-    </nav>
 
     <!-- Three.js Canvas -->
-    <canvas id="three-canvas"></canvas>
+    <canvas id="liminal-canvas"></canvas>
 
-    <!-- Content Overlay -->
-    <div id="content-overlay">
-        <!-- Home Section -->
-        <section id="home" class="content-section active">
-            <div class="hero-content">
-                <h1 class="glitch-text">Welcome to the Solar Dimension</h1>
-                <p class="alien-text">Interactive Developer & Digital Explorer</p>
-                <button class="cta-button" id="explore-btn">Explore the Universe</button>
-            </div>
-        </section>
+    <!-- UI Overlay -->
+    <div id="ui-overlay">
+        <!-- Crosshair -->
+        <div id="crosshair">
+            <div class="crosshair-dot"></div>
+        </div>
 
-        <!-- About Section -->
-        <section id="about" class="content-section">
-            <div class="section-content">
-                <h2>About the Explorer</h2>
-                <p>A digital architect crafting immersive experiences across dimensions.</p>
-                <div class="skills-grid">
-                    <div class="skill-orb">JavaScript</div>
-                    <div class="skill-orb">Three.js</div>
-                    <div class="skill-orb">React</div>
-                    <div class="skill-orb">WebGL</div>
-                </div>
-            </div>
-        </section>
+        <!-- Instructions -->
+        <div id="instructions" class="ui-panel">
+            <p>WASD to move • Mouse to look • Click on doors to enter</p>
+            <p>ESC to unlock cursor</p>
+        </div>
 
-        <!-- Projects Section -->
-        <section id="projects" class="content-section">
-            <div class="section-content">
-                <h2>Cosmic Projects</h2>
-                <div class="projects-grid">
-                    <div class="project-card" data-planet="1">
-                        <h3>Solar Web App</h3>
-                        <p>Interactive solar system visualization</p>
-                    </div>
-                    <div class="project-card" data-planet="2">
-                        <h3>Alien Interface</h3>
-                        <p>Futuristic UI/UX design system</p>
-                    </div>
-                    <div class="project-card" data-planet="3">
-                        <h3>Quantum Portfolio</h3>
-                        <p>This very website you're exploring</p>
-                    </div>
-                </div>
-            </div>
-        </section>
+        <!-- Door Info -->
+        <div id="door-info" class="ui-panel hidden">
+            <p id="door-name">DOOR</p>
+            <p class="door-subtitle">Click to enter</p>
+        </div>
 
-        <!-- Contact Section -->
-        <section id="contact" class="content-section">
-            <div class="section-content">
-                <h2>Establish Contact</h2>
-                <div class="contact-links">
-                    <a href="#" class="contact-link">Email</a>
-                    <a href="#" class="contact-link">GitHub</a>
-                    <a href="#" class="contact-link">LinkedIn</a>
-                </div>
-            </div>
-        </section>
+        <!-- Room Indicator -->
+        <div id="room-indicator" class="ui-panel">
+            <p id="current-room">MAIN CORRIDOR</p>
+        </div>
     </div>
 
-    <!-- Interactive UI -->
-    <div id="ui-elements">
-        <div class="planet-info" id="planet-info">
-            <h3 id="planet-name">Solar System</h3>
-            <p id="planet-description">Click on planets to explore projects</p>
-        </div>
-        
-        <div class="controls">
-            <button id="auto-rotate" class="control-btn">Auto Rotate</button>
-            <button id="reset-camera" class="control-btn">Reset View</button>
+    <!-- Content Sections -->
+    <div id="content-overlay" class="hidden">
+        <div class="content-container">
+            <button id="back-btn" class="back-button">← BACK TO CORRIDOR</button>
+            
+            <!-- About Section -->
+            <section id="about-content" class="content-section">
+                <div class="content-header">
+                    <h1>ABOUT</h1>
+                    <div class="header-line"></div>
+                </div>
+                <div class="content-body">
+                    <p class="intro-text">A digital architect navigating the spaces between reality and virtuality.</p>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="label">LOCATION</span>
+                            <span class="value">The Threshold</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">STATUS</span>
+                            <span class="value">Transitioning</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">FOCUS</span>
+                            <span class="value">Interactive Experiences</span>
+                        </div>
+                    </div>
+                    <p>Specializing in web development, 3D graphics, and creating digital spaces that exist in the liminal realm between familiar and unknown.</p>
+                </div>
+            </section>
+
+            <!-- Work Section -->
+            <section id="work-content" class="content-section">
+                <div class="content-header">
+                    <h1>WORK</h1>
+                    <div class="header-line"></div>
+                </div>
+                <div class="content-body">
+                    <div class="project-list">
+                        <div class="project-item">
+                            <div class="project-header">
+                                <h3>LIMINAL PORTFOLIO</h3>
+                                <span class="project-year">2024</span>
+                            </div>
+                            <p>Interactive 3D portfolio experience exploring liminal space aesthetics</p>
+                            <div class="project-tags">
+                                <span class="tag">Three.js</span>
+                                <span class="tag">WebGL</span>
+                                <span class="tag">Interactive Design</span>
+                            </div>
+                        </div>
+                        
+                        <div class="project-item">
+                            <div class="project-header">
+                                <h3>THRESHOLD INTERFACE</h3>
+                                <span class="project-year">2024</span>
+                            </div>
+                            <p>Experimental UI/UX design system based on transitional spaces</p>
+                            <div class="project-tags">
+                                <span class="tag">React</span>
+                                <span class="tag">CSS</span>
+                                <span class="tag">Design System</span>
+                            </div>
+                        </div>
+                        
+                        <div class="project-item">
+                            <div class="project-header">
+                                <h3>BACKROOMS EXPLORER</h3>
+                                <span class="project-year">2023</span>
+                            </div>
+                            <p>Virtual reality experience navigating infinite office spaces</p>
+                            <div class="project-tags">
+                                <span class="tag">VR</span>
+                                <span class="tag">Unity</span>
+                                <span class="tag">Procedural Generation</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Contact Section -->
+            <section id="contact-content" class="content-section">
+                <div class="content-header">
+                    <h1>CONTACT</h1>
+                    <div class="header-line"></div>
+                </div>
+                <div class="content-body">
+                    <p class="intro-text">Ready to traverse the digital threshold together?</p>
+                    <div class="contact-grid">
+                        <a href="mailto:hello@example.com" class="contact-item">
+                            <span class="contact-label">EMAIL</span>
+                            <span class="contact-value">hello@example.com</span>
+                        </a>
+                        <a href="#" class="contact-item">
+                            <span class="contact-label">GITHUB</span>
+                            <span class="contact-value">@username</span>
+                        </a>
+                        <a href="#" class="contact-item">
+                            <span class="contact-label">LINKEDIN</span>
+                            <span class="contact-value">@username</span>
+                        </a>
+                        <a href="#" class="contact-item">
+                            <span class="contact-label">TWITTER</span>
+                            <span class="contact-value">@username</span>
+                        </a>
+                    </div>
+                    <div class="availability">
+                        <div class="status-indicator"></div>
+                        <span>Available for new projects</span>
+                    </div>
+                </div>
+            </section>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="main.js"></script>
 </body>
 </html>
