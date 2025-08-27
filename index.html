@@ -3,159 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Liminal Portfolio</title>
+    <title>Surreal Hills Portfolio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Space+Grotesk:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Loading Screen -->
     <div id="loading-screen">
         <div class="loading-content">
-            <div class="loading-bar"></div>
-            <p class="loading-text">ENTERING LIMINAL SPACE...</p>
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Generating Landscape...</p>
+            <div class="loading-progress">
+                <div class="progress-bar"></div>
+            </div>
         </div>
     </div>
 
     <!-- Three.js Canvas -->
-    <canvas id="liminal-canvas"></canvas>
+    <canvas id="surreal-canvas"></canvas>
 
     <!-- UI Overlay -->
     <div id="ui-overlay">
         <!-- Crosshair -->
         <div id="crosshair">
-            <div class="crosshair-dot"></div>
+            <div class="crosshair-center"></div>
         </div>
 
         <!-- Instructions -->
         <div id="instructions" class="ui-panel">
-            <p>WASD to move • Mouse to look • Click on doors to enter</p>
-            <p>ESC to unlock cursor</p>
+            <p>WASD to walk • Mouse to look • Click on houses to enter</p>
+            <p>SHIFT to run • SPACE to jump • ESC to unlock cursor</p>
         </div>
 
-        <!-- Door Info -->
-        <div id="door-info" class="ui-panel hidden">
-            <p id="door-name">DOOR</p>
-            <p class="door-subtitle">Click to enter</p>
+        <!-- House Info -->
+        <div id="house-info" class="ui-panel hidden">
+            <div class="house-icon">🏠</div>
+            <p id="house-name">Strange House</p>
+            <p class="house-subtitle">Click to explore</p>
         </div>
 
-        <!-- Room Indicator -->
-        <div id="room-indicator" class="ui-panel">
-            <p id="current-room">MAIN CORRIDOR</p>
+        <!-- Environment Info -->
+        <div id="environment-info" class="ui-panel">
+            <div class="weather-icon">☀️</div>
+            <p id="location-name">Surreal Valley</p>
+            <p class="coordinates">37.7749° N, 122.4194° W</p>
+        </div>
+
+        <!-- Minimap -->
+        <div id="minimap" class="ui-panel">
+            <canvas id="minimap-canvas" width="120" height="120"></canvas>
+            <div class="minimap-player"></div>
         </div>
     </div>
 
     <!-- Content Sections -->
     <div id="content-overlay" class="hidden">
         <div class="content-container">
-            <button id="back-btn" class="back-button">← BACK TO CORRIDOR</button>
+            <button id="back-btn" class="back-button">← Exit House</button>
             
-            <!-- About Section -->
+            <!-- About House -->
             <section id="about-content" class="content-section">
-                <div class="content-header">
-                    <h1>ABOUT</h1>
-                    <div class="header-line"></div>
-                </div>
-                <div class="content-body">
-                    <p class="intro-text">A digital architect navigating the spaces between reality and virtuality.</p>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <span class="label">LOCATION</span>
-                            <span class="value">The Threshold</span>
+                <div class="house-interior about-house">
+                    <div class="room-header">
+                        <h1>The Memory House</h1>
+                        <p class="room-description">A place where thoughts take physical form</p>
+                    </div>
+                    
+                    <div class="room-content">
+                        <div class="floating-elements">
+                            <div class="memory-orb" style="--delay: 0s">
+                                <h3>Digital Architect</h3>
+                                <p>Crafting experiences that blur the line between reality and imagination</p>
+                            </div>
+                            <div class="memory-orb" style="--delay: 0.5s">
+                                <h3>Creative Technologist</h3>
+                                <p>Specializing in immersive web experiences and interactive design</p>
+                            </div>
+                            <div class="memory-orb" style="--delay: 1s">
+                                <h3>Reality Bender</h3>
+                                <p>Using code to create impossible spaces and surreal interactions</p>
+                            </div>
                         </div>
-                        <div class="info-item">
-                            <span class="label">STATUS</span>
-                            <span class="value">Transitioning</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="label">FOCUS</span>
-                            <span class="value">Interactive Experiences</span>
+                        
+                        <div class="skills-constellation">
+                            <div class="skill-star" data-skill="JavaScript">JS</div>
+                            <div class="skill-star" data-skill="Three.js">3D</div>
+                            <div class="skill-star" data-skill="React">⚛️</div>
+                            <div class="skill-star" data-skill="WebGL">GL</div>
+                            <div class="skill-star" data-skill="GLSL">SH</div>
+                            <div class="skill-star" data-skill="Node.js">📦</div>
                         </div>
                     </div>
-                    <p>Specializing in web development, 3D graphics, and creating digital spaces that exist in the liminal realm between familiar and unknown.</p>
                 </div>
             </section>
 
-            <!-- Work Section -->
+            <!-- Work House -->
             <section id="work-content" class="content-section">
-                <div class="content-header">
-                    <h1>WORK</h1>
-                    <div class="header-line"></div>
-                </div>
-                <div class="content-body">
-                    <div class="project-list">
-                        <div class="project-item">
-                            <div class="project-header">
-                                <h3>LIMINAL PORTFOLIO</h3>
-                                <span class="project-year">2024</span>
+                <div class="house-interior work-house">
+                    <div class="room-header">
+                        <h1>The Workshop</h1>
+                        <p class="room-description">Where impossible projects come to life</p>
+                    </div>
+                    
+                    <div class="room-content">
+                        <div class="project-gallery">
+                            <div class="project-frame">
+                                <div class="project-preview surreal-preview"></div>
+                                <div class="project-info">
+                                    <h3>Surreal Portfolio</h3>
+                                    <p>This hyper-realistic landscape you're exploring</p>
+                                    <div class="tech-stack">Three.js • WebGL • Procedural Generation</div>
+                                </div>
                             </div>
-                            <p>Interactive 3D portfolio experience exploring liminal space aesthetics</p>
-                            <div class="project-tags">
-                                <span class="tag">Three.js</span>
-                                <span class="tag">WebGL</span>
-                                <span class="tag">Interactive Design</span>
+                            
+                            <div class="project-frame">
+                                <div class="project-preview liminal-preview"></div>
+                                <div class="project-info">
+                                    <h3>Liminal Spaces</h3>
+                                    <p>Interactive exploration of transitional environments</p>
+                                    <div class="tech-stack">Three.js • Atmospheric Rendering</div>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <div class="project-item">
-                            <div class="project-header">
-                                <h3>THRESHOLD INTERFACE</h3>
-                                <span class="project-year">2024</span>
-                            </div>
-                            <p>Experimental UI/UX design system based on transitional spaces</p>
-                            <div class="project-tags">
-                                <span class="tag">React</span>
-                                <span class="tag">CSS</span>
-                                <span class="tag">Design System</span>
-                            </div>
-                        </div>
-                        
-                        <div class="project-item">
-                            <div class="project-header">
-                                <h3>BACKROOMS EXPLORER</h3>
-                                <span class="project-year">2023</span>
-                            </div>
-                            <p>Virtual reality experience navigating infinite office spaces</p>
-                            <div class="project-tags">
-                                <span class="tag">VR</span>
-                                <span class="tag">Unity</span>
-                                <span class="tag">Procedural Generation</span>
+                            
+                            <div class="project-frame">
+                                <div class="project-preview quantum-preview"></div>
+                                <div class="project-info">
+                                    <h3>Quantum Interface</h3>
+                                    <p>UI that exists in multiple dimensions simultaneously</p>
+                                    <div class="tech-stack">React • CSS Houdini • WebXR</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Contact Section -->
+            <!-- Contact House -->
             <section id="contact-content" class="content-section">
-                <div class="content-header">
-                    <h1>CONTACT</h1>
-                    <div class="header-line"></div>
-                </div>
-                <div class="content-body">
-                    <p class="intro-text">Ready to traverse the digital threshold together?</p>
-                    <div class="contact-grid">
-                        <a href="mailto:hello@example.com" class="contact-item">
-                            <span class="contact-label">EMAIL</span>
-                            <span class="contact-value">hello@example.com</span>
-                        </a>
-                        <a href="#" class="contact-item">
-                            <span class="contact-label">GITHUB</span>
-                            <span class="contact-value">@username</span>
-                        </a>
-                        <a href="#" class="contact-item">
-                            <span class="contact-label">LINKEDIN</span>
-                            <span class="contact-value">@username</span>
-                        </a>
-                        <a href="#" class="contact-item">
-                            <span class="contact-label">TWITTER</span>
-                            <span class="contact-value">@username</span>
-                        </a>
+                <div class="house-interior contact-house">
+                    <div class="room-header">
+                        <h1>The Communication Hub</h1>
+                        <p class="room-description">Signals from across the digital realm</p>
                     </div>
-                    <div class="availability">
-                        <div class="status-indicator"></div>
-                        <span>Available for new projects</span>
+                    
+                    <div class="room-content">
+                        <div class="communication-array">
+                            <div class="signal-tower">
+                                <div class="signal-waves"></div>
+                                <a href="mailto:hello@example.com" class="contact-beacon">
+                                    <div class="beacon-icon">📧</div>
+                                    <div class="beacon-info">
+                                        <span class="beacon-label">Email Signal</span>
+                                        <span class="beacon-value">hello@example.com</span>
+                                    </div>
+                                </a>
+                            </div>
+                            
+                            <div class="signal-tower">
+                                <div class="signal-waves"></div>
+                                <a href="#" class="contact-beacon">
+                                    <div class="beacon-icon">🐙</div>
+                                    <div class="beacon-info">
+                                        <span class="beacon-label">GitHub Portal</span>
+                                        <span class="beacon-value">@username</span>
+                                    </div>
+                                </a>
+                            </div>
+                            
+                            <div class="signal-tower">
+                                <div class="signal-waves"></div>
+                                <a href="#" class="contact-beacon">
+                                    <div class="beacon-icon">💼</div>
+                                    <div class="beacon-info">
+                                        <span class="beacon-label">LinkedIn Network</span>
+                                        <span class="beacon-value">@username</span>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="availability-status">
+                            <div class="status-orb pulsing"></div>
+                            <span>Currently available for new adventures</span>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -166,3 +198,4 @@
     <script src="main.js"></script>
 </body>
 </html>
+
