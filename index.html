@@ -8,57 +8,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <style>
-        /* CSS for the entire page */
-        :root {
-            --text-color: #333;
-        }
-
         body {
             margin: 0;
             font-family: 'Lato', sans-serif;
             background-color: #f0f8ff;
-            color: var(--text-color);
+            color: #333;
             overflow: hidden;
         }
-
-        /* Intro overlay */
-        #intro-overlay {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.3);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1001;
-            color: white;
-            cursor: pointer;
-            transition: opacity 1s ease-in-out;
-        }
-
-        #intro-overlay.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        #intro-text {
-            text-align: center;
-        }
-
-        #intro-text p {
-            font-family: 'Playfair Display', serif;
-            font-size: 3rem;
-            margin: 0 0 10px 0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
-
-        #intro-text span {
-            font-size: 1.2rem;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-        
-        /* Canvas containers */
         .canvas-container {
             position: fixed;
             top: 0;
@@ -68,13 +24,39 @@
             outline: none;
             transition: opacity 1.5s ease-in-out;
         }
-
-        #main-scene-container {
+        #main-canvas {
             opacity: 0;
             pointer-events: none;
         }
-        
-        /* Header Navigation */
+        #intro-overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            color: white;
+            cursor: pointer;
+            transition: opacity 1s ease-in-out;
+            background-color: rgba(0,0,0,0.3);
+        }
+        #intro-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        #intro-text { text-align: center; }
+        #intro-text p {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            margin: 0 0 10px 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        #intro-text span {
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
         header {
             position: fixed;
             top: 0;
@@ -87,7 +69,6 @@
             gap: 15px;
             z-index: 10;
         }
-
         header button {
             padding: 10px 25px;
             border: 2px solid white;
@@ -103,14 +84,11 @@
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-
         header button:hover {
             background-color: white;
             color: #333;
             transform: translateY(-2px);
         }
-        
-        /* UI Panels Overlay */
         .panel-overlay {
             position: fixed;
             bottom: 0;
@@ -126,13 +104,11 @@
             transform: translateY(30px);
             transition: opacity 0.5s ease, transform 0.5s ease;
         }
-
         .panel-overlay.active {
             opacity: 1;
             transform: translateY(0);
             pointer-events: auto;
         }
-        
         .panel-content {
             width: 90%;
             max-width: 800px;
@@ -149,7 +125,6 @@
             overflow-y: auto;
             position: relative;
         }
-        
         .panel-content h2 {
             margin-top: 0;
             font-size: 3.5rem;
@@ -157,14 +132,12 @@
             font-family: 'Playfair Display', serif;
             font-weight: 700;
         }
-        
         .panel-content p {
             font-family: 'Lato', sans-serif;
             font-size: 1.1rem;
             line-height: 1.7;
             max-width: 700px;
         }
-
         .content-placeholder {
             min-height: 300px;
             background-color: rgba(0, 0, 0, 0.05);
@@ -175,7 +148,6 @@
             font-style: italic;
             color: #666;
         }
-
         .close-btn {
             position: absolute;
             top: 20px;
@@ -187,10 +159,7 @@
             transition: color 0.2s;
             font-family: Arial, sans-serif;
         }
-
-        .close-btn:hover {
-            color: #333;
-        }
+        .close-btn:hover { color: #333; }
     </style>
 </head>
 <body>
@@ -211,42 +180,13 @@
         <button id="btn-about" data-panel="panel-about">About</button>
     </header>
 
-    <div id="panel-work" class="panel-overlay">
-        <div class="panel-content">
-            <span class="close-btn">&times;</span>
-            <h2>My Work</h2>
-            <p>Here's a selection of projects that showcase my skills in design, development, and interactive experiences. Each piece aims to solve a unique problem with a creative solution.</p>
-            <div class="content-placeholder">[ Work gallery or project list would go here... ]</div>
-        </div>
-    </div>
-
-    <div id="panel-contact" class="panel-overlay">
-        <div class="panel-content">
-            <span class="close-btn">&times;</span>
-            <h2>Contact Me</h2>
-            <p>I'm always open to discussing new projects or creative ideas. Feel free to reach out through the channels below. I look forward to connecting with you!</p>
-            <div class="content-placeholder">[ Contact form or social media links would go here... ]</div>
-        </div>
-    </div>
-
-    <div id="panel-about" class="panel-overlay">
-        <div class="panel-content">
-            <span class="close-btn">&times;</span>
-            <h2>About</h2>
-            <p>I am a multidisciplinary creator with a passion for building immersive digital worlds. My background is in computer graphics, web development, and interactive art. This space is my playground for new ideas.</p>
-            <div class="content-placeholder">[ A more detailed bio or resume link would go here... ]</div>
-        </div>
-    </div>
+    <div id="panel-work" class="panel-overlay"><div class="panel-content"><span class="close-btn">&times;</span><h2>My Work</h2><p>Here's a selection of projects that showcase my skills in design, development, and interactive experiences. Each piece aims to solve a unique problem with a creative solution.</p><div class="content-placeholder">[ Work gallery or project list would go here... ]</div></div></div>
+    <div id="panel-contact" class="panel-overlay"><div class="panel-content"><span class="close-btn">&times;</span><h2>Contact Me</h2><p>I'm always open to discussing new projects or creative ideas. Feel free to reach out through the channels below. I look forward to connecting with you!</p><div class="content-placeholder">[ Contact form or social media links would go here... ]</div></div></div>
+    <div id="panel-about" class="panel-overlay"><div class="panel-content"><span class="close-btn">&times;</span><h2>About</h2><p>I am a multidisciplinary creator with a passion for building immersive digital worlds. My background is in computer graphics, web development, and interactive art. This space is my playground for new ideas.</p><div class="content-placeholder">[ A more detailed bio or resume link would go here... ]</div></div></div>
     
     <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.165.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.165.0/examples/jsm/"
-            }
-        }
+        { "imports": { "three": "https://unpkg.com/three@0.165.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.165.0/examples/jsm/" } }
     </script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <script type="module">
@@ -256,8 +196,9 @@
         import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
         // --- GLOBAL STATE ---
-        let mainScene, mainCamera, mainControls, mainRenderer, hillMaterial, textLabels = [], orbs = [];
+        let mainScene, mainCamera, mainControls, mainRenderer, hillMaterial, textLabels = [], orbs = [], interactiveDoors = [];
         let introScene, introCamera, introRenderer, introDoor;
+        let portalRenderTarget;
         const clock = new THREE.Clock();
         
         // --- COMMON HELPERS ---
@@ -268,11 +209,15 @@
             const doorMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
             const frameMaterial = new THREE.MeshStandardMaterial({ color: 0xf0f0f0 });
             const knobMaterial = new THREE.MeshStandardMaterial({ color: 0xD4AF37, metalness: 1.0, roughness: 0.2 });
-
-            const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(7, 14, 0.4), doorMaterial);
-            const doorPivot = new THREE.Group(); // Pivot for opening animation
+            
+            const doorWidth = 7;
+            const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(doorWidth, 14, 0.4), doorMaterial);
+            const doorPivot = new THREE.Group();
             doorPivot.add(doorPanel);
-            doorPanel.position.x = 3.5; // Move panel so it pivots on its edge
+            
+            // Correctly set pivot point at the hinge
+            doorPivot.position.x = -doorWidth / 2;
+            doorPanel.position.x = doorWidth / 2;
 
             const topFrame = new THREE.Mesh(new THREE.BoxGeometry(8, 0.6, 0.6), frameMaterial);
             topFrame.position.y = 7.3;
@@ -281,13 +226,13 @@
             const rightFrame = new THREE.Mesh(new THREE.BoxGeometry(0.6, 15.2, 0.6), frameMaterial);
             rightFrame.position.x = 3.7;
             const knob = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16), knobMaterial);
-            knob.position.set(2.5, 0, 0.4);
-            doorPanel.add(knob); // Add knob to the panel so it moves with it
+            knob.position.set(doorWidth - 1, 0, 0.4);
+            doorPanel.add(knob);
 
             doorGroup.add(doorPivot, topFrame, leftFrame, rightFrame);
             doorGroup.children.forEach(child => { child.castShadow = true; });
             doorGroup.name = name;
-            doorGroup.userData.doorPivot = doorPivot;
+            doorGroup.userData = { doorPivot, isOpen: false };
 
             return doorGroup;
         }
@@ -299,10 +244,7 @@
             introCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             introCamera.position.set(0, 7.5, 20);
 
-            introRenderer = new THREE.WebGLRenderer({
-                canvas: document.getElementById('intro-canvas'),
-                antialias: true,
-            });
+            introRenderer = new THREE.WebGLRenderer({ canvas: document.getElementById('intro-canvas'), antialias: true });
             introRenderer.setSize(window.innerWidth, window.innerHeight);
             introRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -314,6 +256,15 @@
             introDoor = createClassicDoor('introDoor');
             introDoor.position.y = 7.5;
             introScene.add(introDoor);
+
+            // Create the "portal view" plane
+            portalRenderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+            const portalPlane = new THREE.Mesh(
+                new THREE.PlaneGeometry(7.5, 14.5),
+                new THREE.MeshBasicMaterial({ map: portalRenderTarget.texture })
+            );
+            portalPlane.position.set(0, 7.5, -0.1);
+            introScene.add(portalPlane);
         }
 
         // --- MAIN SCENE ---
@@ -324,12 +275,9 @@
             const fogColor = 0xFFA07A;
 
             mainCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            mainCamera.position.set(0, 8, 50); // Low, ground-level cinematic position
+            mainCamera.position.set(0, 8, 50);
 
-            mainRenderer = new THREE.WebGLRenderer({
-                canvas: document.getElementById('main-canvas'),
-                antialias: true,
-            });
+            mainRenderer = new THREE.WebGLRenderer({ canvas: document.getElementById('main-canvas'), antialias: true });
             mainRenderer.setSize(window.innerWidth, window.innerHeight);
             mainRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             mainRenderer.shadowMap.enabled = true;
@@ -341,7 +289,7 @@
             mainControls.minDistance = 20;
             mainControls.maxDistance = 60;
             mainControls.target.set(0, 5, 0);
-            mainControls.maxPolarAngle = Math.PI / 2; // Prevent going underground
+            mainControls.maxPolarAngle = Math.PI / 2;
             mainControls.update();
 
             const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
@@ -394,16 +342,14 @@
             const orbVertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
             const orbColors = [0xffc107, 0xe91e63, 0x2196f3, 0x4caf50, 0x9c27b0];
             for (let i = 0; i < 50; i++) {
-                const originalColor = new THREE.Color(orbColors[i % orbColors.length]);
                 const orb = new THREE.Mesh(
                     new THREE.SphereGeometry(1.5, 32, 32),
-                    new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uColor: { value: originalColor.clone() } }, vertexShader: orbVertexShader, fragmentShader: orbFragmentShader, transparent: true, blending: THREE.AdditiveBlending })
+                    new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(orbColors[i % orbColors.length]) } }, vertexShader: orbVertexShader, fragmentShader: orbFragmentShader, transparent: true, blending: THREE.AdditiveBlending })
                 );
                 const x = (Math.random() - 0.5) * 250;
                 const z = (Math.random() - 0.5) * 250;
                 const y = getNoise(x, z) + 5 + Math.random() * 20;
                 orb.position.set(x, y, z);
-                orb.userData.originalColor = originalColor;
                 orb.userData.anim = { speed: Math.random() * 0.5 + 0.2, offset: Math.random() * Math.PI * 2 };
                 mainScene.add(orb);
                 orbs.push(orb);
@@ -415,11 +361,10 @@
                 { pos: new THREE.Vector2(40, -5), name: 'aboutDoor', text: 'About' }
             ];
 
-            const interactiveDoors = [];
             doorPositions.forEach(data => {
                 const door = createClassicDoor(data.name);
                 const y = getNoise(data.pos.x, data.pos.y);
-                door.position.set(data.pos.x, y + 7.5, data.pos.y); // Adjusted y for immersion
+                door.position.set(data.pos.x, y + 7.0, data.pos.y); // Adjusted y for immersion
                 mainScene.add(door);
                 interactiveDoors.push(door);
                 createTextLabel(data.text, door.position, font, 0x39ff14);
@@ -445,6 +390,12 @@
         }
 
         function animateIntro() {
+            // Render the main scene to our portal's texture
+            mainRenderer.setRenderTarget(portalRenderTarget);
+            mainRenderer.render(mainScene, mainCamera);
+            mainRenderer.setRenderTarget(null); // Reset renderer
+
+            // Render the intro scene to the screen
             introRenderer.render(introScene, introCamera);
         }
 
@@ -466,21 +417,54 @@
         function startTransition() {
             document.getElementById('intro-overlay').classList.add('hidden');
             
-            // Animate door opening
-            gsap.to(introDoor.userData.doorPivot.rotation, { y: -Math.PI * 0.6, duration: 2.5, ease: 'power2.inOut' });
-            
-            // Animate camera moving through the door
-            gsap.to(introCamera.position, { z: -2, duration: 2.5, ease: 'power2.inOut', onComplete: () => {
-                // Switch scenes
-                document.getElementById('intro-canvas').style.opacity = 0;
-                document.getElementById('main-canvas').style.opacity = 1;
-                document.getElementById('main-canvas').style.pointerEvents = 'auto';
-                currentAnimation = animateMain;
-            }});
+            gsap.to(introDoor.userData.doorPivot.rotation, { 
+                y: -Math.PI * 0.6, 
+                duration: 2.0, 
+                ease: 'power3.inOut',
+                onComplete: () => {
+                    gsap.to(introCamera.position, { 
+                        z: -2, 
+                        duration: 2.0, 
+                        ease: 'power2.in', 
+                        onComplete: () => {
+                            document.getElementById('intro-canvas').style.opacity = 0;
+                            document.getElementById('main-canvas').style.opacity = 1;
+                            document.getElementById('main-canvas').style.pointerEvents = 'auto';
+                            currentAnimation = animateMain;
+                        }
+                    });
+                }
+            });
         }
 
         // --- EVENT LISTENERS ---
         document.getElementById('intro-overlay').addEventListener('click', startTransition);
+        document.getElementById('main-canvas').addEventListener('click', onMainCanvasClick);
+
+        function onMainCanvasClick(event) {
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, mainCamera);
+            const intersects = raycaster.intersectObjects(interactiveDoors, true);
+
+            if (intersects.length > 0) {
+                let clickedObject = intersects[0].object;
+                while (clickedObject.parent && !interactiveDoors.includes(clickedObject)) {
+                    clickedObject = clickedObject.parent;
+                }
+
+                if (!clickedObject.userData.isOpen) {
+                    gsap.to(clickedObject.userData.doorPivot.rotation, { y: -Math.PI * 0.6, duration: 1.5, ease: 'power3.out' });
+                    clickedObject.userData.isOpen = true;
+                }
+                
+                const panelId = doorPanelMap[clickedObject.name];
+                if (panelId) showPanel(panelId);
+            }
+        }
         
         const doorPanelMap = { 'workDoor': 'panel-work', 'contactDoor': 'panel-contact', 'aboutDoor': 'panel-about' };
         const panels = document.querySelectorAll('.panel-overlay');
@@ -504,6 +488,7 @@
             introCamera.aspect = width / height;
             introCamera.updateProjectionMatrix();
             introRenderer.setSize(width, height);
+            portalRenderTarget.setSize(width, height);
 
             if (mainCamera) {
                 mainCamera.aspect = width / height;
@@ -514,13 +499,12 @@
         window.addEventListener('resize', onWindowResize);
         
         // --- INITIALIZE ---
-        initIntroScene();
         const fontLoader = new FontLoader();
         fontLoader.load('https://unpkg.com/three@0.165.0/examples/fonts/optimer_bold.typeface.json', (font) => {
             initMainScene(font);
+            initIntroScene();
             animate();
         });
-
     </script>
 </body>
 </html>
