@@ -4,7 +4,9 @@
     <title>Sam's World • An Interactive Portfolio</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <style>
         /* CSS for the entire page */
         :root {
@@ -16,7 +18,7 @@
 
         body {
             margin: 0;
-            font-family: 'Caveat', cursive; /* Applied whimsical font */
+            font-family: 'Lato', sans-serif; /* Classic sans-serif for body */
             background-color: #f0f8ff;
             color: var(--text-color);
             overflow: hidden;
@@ -31,7 +33,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 1001; /* Above header */
+            z-index: 1001;
         }
 
         #instructions {
@@ -48,13 +50,17 @@
         }
 
         #instructions p {
-            font-size: 2.5rem;
+            font-family: 'Playfair Display', serif; /* Classic serif for heading */
+            font-size: 3rem;
             padding: 0;
             margin: 0 0 20px 0;
+            font-weight: 700;
         }
 
         #instructions span {
-            font-size: 1.5rem;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
         
         /* Canvas for the 3D scene */
@@ -83,14 +89,16 @@
             padding: 10px 25px;
             border: 2px solid white;
             border-radius: 50px;
-            font-size: 1.5rem;
+            font-size: 1rem; /* Adjusted for new font */
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
             background-color: rgba(255, 255, 255, 0.2);
             color: white;
             text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-            font-family: 'Caveat', cursive;
+            font-family: 'Lato', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         header button:hover {
@@ -109,7 +117,7 @@
             display: flex;
             justify-content: center;
             align-items: flex-end;
-            z-index: 1002; /* Above blocker */
+            z-index: 1002;
             pointer-events: none;
             opacity: 0;
             transform: translateY(30px);
@@ -141,15 +149,16 @@
         
         .panel-content h2 {
             margin-top: 0;
-            font-size: 3rem;
+            font-size: 3.5rem; /* Adjusted for new font */
             margin-bottom: 10px;
-            font-family: 'Caveat', cursive;
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
         }
         
         .panel-content p {
-            font-family: Arial, sans-serif;
+            font-family: 'Lato', sans-serif;
             font-size: 1.1rem;
-            line-height: 1.6;
+            line-height: 1.7;
             max-width: 700px;
         }
 
@@ -163,7 +172,7 @@
             box-sizing: border-box;
             font-style: italic;
             color: #666;
-            font-family: Arial, sans-serif;
+            font-family: 'Lato', sans-serif;
         }
 
         .close-btn {
@@ -286,10 +295,11 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
             const fontLoader = new FontLoader();
-            fontLoader.load('https://unpkg.com/three@0.165.0/examples/fonts/helvetiker_regular.typeface.json', (font) => {
+            // ** CHANGED FONT TO OPTIMER BOLD for a more classic look **
+            fontLoader.load('https://unpkg.com/three@0.165.0/examples/fonts/optimer_bold.typeface.json', (font) => {
                 populateScene(font);
                 document.getElementById('blocker').style.display = 'flex';
-                animate(); // Start animation loop after scene is ready
+                animate();
             });
 
             initPointerLock();
@@ -311,8 +321,6 @@
             scene.fog = new THREE.Fog(fogColor, 80, 200);
 
             scene.add(new THREE.AmbientLight(0xFFFFFF, 0.7));
-            
-            // ** FIXED ERROR HERE: Used correct `DirectionalLight` constructor **
             const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1.5);
             directionalLight.position.set(50, 50, 25);
             directionalLight.castShadow = true;
@@ -361,7 +369,7 @@
                 const z = (Math.random() - 0.5) * 250;
                 const y = getNoise(x, z) + 5 + Math.random() * 20;
                 orb.position.set(x, y, z);
-                orb.userData.originalColor = originalColor; // Store original color
+                orb.userData.originalColor = originalColor;
                 orb.userData.anim = { speed: Math.random() * 0.5 + 0.2, offset: Math.random() * Math.PI * 2 };
                 scene.add(orb);
                 orbs.push(orb);
@@ -404,12 +412,17 @@
         }
 
         function createTextLabel(text, doorPosition, font, color) {
-            const textGeometry = new TextGeometry(text, { font: font, size: 2.5, height: 0.3, curveSegments: 12 });
+            const textGeometry = new TextGeometry(text, {
+                font: font,
+                size: 2.2, // Adjusted size for the new font
+                height: 0.3,
+                curveSegments: 12,
+            });
             textGeometry.center();
             const textMaterial = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 2.5 });
             const textMesh = new THREE.Mesh(textGeometry, textMaterial);
             textMesh.castShadow = true;
-            textMesh.position.set(doorPosition.x, doorPosition.y + 9, doorPosition.z);
+            textMesh.position.set(doorPosition.x, doorPosition.y + 9.5, doorPosition.z); // Adjusted height
             scene.add(textMesh);
             textLabels.push(textMesh);
         }
@@ -423,6 +436,7 @@
             controls.addEventListener('lock', () => { blocker.style.display = 'none'; });
             controls.addEventListener('unlock', () => { blocker.style.display = 'flex'; });
             document.addEventListener('click', () => {
+                if (!controls.isLocked) return; // Only check for door clicks if controls are locked
                 const raycaster = new THREE.Raycaster();
                 raycaster.setFromCamera({x: 0, y: 0}, camera);
                 const intersects = raycaster.intersectObjects(interactiveObjects, true);
@@ -473,12 +487,10 @@
             if (intersects.length > 0 && intersects[0].distance < 30) {
                 const hoveredOrb = intersects[0].object;
                 if (lastHoveredOrb !== hoveredOrb) {
-                    // Reset previous orb if there was one
                     if (lastHoveredOrb) {
                         gsap.to(lastHoveredOrb.scale, { x: 1, y: 1, z: 1, duration: 0.3 });
                         gsap.to(lastHoveredOrb.material.uniforms.uColor.value, { ...lastHoveredOrb.userData.originalColor, duration: 0.3 });
                     }
-                    // Animate new orb
                     lastHoveredOrb = hoveredOrb;
                     gsap.to(hoveredOrb.scale, { x: 1.5, y: 1.5, z: 1.5, duration: 0.3 });
                     gsap.to(hoveredOrb.material.uniforms.uColor.value, { r: 1, g: 1, b: 1, duration: 0.3 });
