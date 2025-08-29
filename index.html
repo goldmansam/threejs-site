@@ -215,7 +215,6 @@
             const doorPivot = new THREE.Group();
             doorPivot.add(doorPanel);
             
-            // Correctly set pivot point at the hinge
             doorPivot.position.x = -doorWidth / 2;
             doorPanel.position.x = doorWidth / 2;
 
@@ -226,7 +225,9 @@
             const rightFrame = new THREE.Mesh(new THREE.BoxGeometry(0.6, 15.2, 0.6), frameMaterial);
             rightFrame.position.x = 3.7;
             const knob = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16), knobMaterial);
-            knob.position.set(doorWidth - 1, 0, 0.4);
+            
+            // ** FIXED: Corrected knob position to be relative to the door panel's center **
+            knob.position.set(2.5, 0, 0.4); 
             doorPanel.add(knob);
 
             doorGroup.add(doorPivot, topFrame, leftFrame, rightFrame);
@@ -257,7 +258,6 @@
             introDoor.position.y = 7.5;
             introScene.add(introDoor);
 
-            // Create the "portal view" plane
             portalRenderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
             const portalPlane = new THREE.Mesh(
                 new THREE.PlaneGeometry(7.5, 14.5),
@@ -364,7 +364,8 @@
             doorPositions.forEach(data => {
                 const door = createClassicDoor(data.name);
                 const y = getNoise(data.pos.x, data.pos.y);
-                door.position.set(data.pos.x, y + 7.0, data.pos.y); // Adjusted y for immersion
+                // ** FIXED: Raised doors slightly to make them appear more grounded **
+                door.position.set(data.pos.x, y + 7.5, data.pos.y);
                 mainScene.add(door);
                 interactiveDoors.push(door);
                 createTextLabel(data.text, door.position, font, 0x39ff14);
@@ -390,12 +391,9 @@
         }
 
         function animateIntro() {
-            // Render the main scene to our portal's texture
             mainRenderer.setRenderTarget(portalRenderTarget);
             mainRenderer.render(mainScene, mainCamera);
-            mainRenderer.setRenderTarget(null); // Reset renderer
-
-            // Render the intro scene to the screen
+            mainRenderer.setRenderTarget(null);
             introRenderer.render(introScene, introCamera);
         }
 
@@ -416,7 +414,6 @@
 
         function startTransition() {
             document.getElementById('intro-overlay').classList.add('hidden');
-            
             gsap.to(introDoor.userData.doorPivot.rotation, { 
                 y: -Math.PI * 0.6, 
                 duration: 2.0, 
