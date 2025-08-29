@@ -4,6 +4,7 @@
     <title>Sam's World • An Interactive Portfolio</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet">
     <style>
         /* CSS for the entire page */
         :root {
@@ -16,7 +17,7 @@
 
         body {
             margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Creepster', cursive; /* Applied surreal font */
             background-color: var(--bg-color);
             color: var(--text-color);
             overflow: hidden;
@@ -35,7 +36,7 @@
             justify-content: center;
             align-items: center;
             z-index: 1000;
-            font-size: 2rem;
+            font-size: 3rem; /* Slightly larger for impact */
             font-weight: 500;
             letter-spacing: 2px;
             transition: opacity 1.5s ease-out, visibility 1.5s;
@@ -74,13 +75,14 @@
             padding: 10px 25px;
             border: 2px solid white;
             border-radius: 50px;
-            font-size: 16px;
+            font-size: 1.2rem; /* Adjusted font size */
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             background-color: rgba(255, 255, 255, 0.2);
             color: white;
             text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            font-family: 'Creepster', cursive; /* Applied surreal font */
         }
 
         header button:hover {
@@ -127,12 +129,14 @@
             box-sizing: border-box;
             overflow-y: auto;
             position: relative;
+            font-family: Arial, sans-serif; /* Keep panel content readable, switch back to a standard font */
         }
         
         .panel-content h2 {
             margin-top: 0;
             font-size: 2.5rem;
             margin-bottom: 10px;
+            font-family: 'Creepster', cursive; /* Applied surreal font for titles */
         }
         
         .panel-content p {
@@ -162,6 +166,7 @@
             cursor: pointer;
             color: #888;
             transition: color 0.2s;
+            font-family: Arial, sans-serif; /* Keep close button readable */
         }
 
         .close-btn:hover {
@@ -179,6 +184,8 @@
             font-weight: 500;
             z-index: 5;
             pointer-events: none;
+            font-family: 'Creepster', cursive; /* Applied surreal font */
+            font-size: 1.3rem; /* Adjusted font size */
         }
 
     </style>
@@ -247,15 +254,13 @@
         const scene = new THREE.Scene();
         const clock = new THREE.Clock();
 
-        // New Surrealist Colors
-        const skyColor = 0xF5F5DC; // Beige/Bright Sky
+        // New Surrealist Colors and Fog
         const hillColor = 0x004d00; // Deep Green
-        const fogColor = 0xFFFFE0; // Light Yellow
-        const ambientLightColor = 0xFFFFFF;
-        const directionalLightColor = 0xFFFFFF;
-        
-        scene.background = new THREE.Color(skyColor);
-        scene.fog = new THREE.Fog(fogColor, 40, 150);
+        const fogColor = 0xFFA07A; // Light Salmon for more opaque yellowish fog
+
+        // Setup for gradient sky
+        const topSkyColor = new THREE.Color(0x87CEEB); // Vibrant Blue
+        const bottomSkyColor = new THREE.Color(0xFFA500); // Orange for sunset glow
 
         // CAMERA
         // =================================================================
@@ -273,12 +278,48 @@
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+        // --- Gradient Sky Plane ---
+        const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
+        const skyMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                uTopColor: { value: topSkyColor },
+                uBottomColor: { value: bottomSkyColor },
+                uOffset: { value: 33 },
+                uExponent: { value: 0.6 }
+            },
+            vertexShader: `
+                varying vec3 vWorldPosition;
+                void main() {
+                    vec4 worldPosition = modelMatrix * vec4( position, 1.0 );
+                    vWorldPosition = worldPosition.xyz;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+                }
+            `,
+            fragmentShader: `
+                uniform vec3 uTopColor;
+                uniform vec3 uBottomColor;
+                uniform float uOffset;
+                uniform float uExponent;
+                varying vec3 vWorldPosition;
+                void main() {
+                    float h = normalize( vWorldPosition + uOffset ).y;
+                    gl_FragColor = vec4( mix( uBottomColor, uTopColor, max( pow( max( h , 0.0), uExponent ), 0.0 ) ), 1.0 );
+                }
+            `,
+            side: THREE.BackSide
+        });
+        const sky = new THREE.Mesh(skyGeometry, skyMaterial);
+        scene.add(sky);
+        
+        // --- Fog (after sky to ensure it blends correctly) ---
+        scene.fog = new THREE.Fog(fogColor, 30, 100); // More opaque fog, closer range
+
         // LIGHTING
         // =================================================================
-        const ambientLight = new THREE.AmbientLight(ambientLightColor, 0.7);
+        const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.7);
         scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(directionalLightColor, 1.5);
+        const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1.5);
         directionalLight.position.set(50, 50, 25);
         directionalLight.castShadow = true;
         directionalLight.shadow.mapSize.width = 2048;
@@ -344,12 +385,9 @@
             uniform vec3 uColor;
             varying vec2 vUv;
 
-            // 2D Random function
             float random(vec2 st) {
                 return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
             }
-
-            // 2D Noise function
             float noise(vec2 st) {
                 vec2 i = floor(st);
                 vec2 f = fract(st);
@@ -370,19 +408,24 @@
             }
         `;
 
-        const createPortal = (color, position, name) => {
+        const createPortal = (portalEffectColor, position, name) => {
             const portalGroup = new THREE.Group();
             
-            const frameMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
+            // Neutral metallic frame for the rings
+            const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.9, roughness: 0.1 });
             const frame = new THREE.Mesh(new THREE.TorusGeometry(5, 0.4, 16, 100), frameMaterial);
-            frame.rotation.x = Math.PI / 2;
+            frame.rotation.x = Math.PI / 2; // Original rotation for horizontal torus
+            
+            // Rotate the group to make the torus vertical
+            portalGroup.rotation.z = Math.PI / 2; 
+            portalGroup.rotation.y = Math.random() * Math.PI; // Random initial rotation
 
             const portalSurface = new THREE.Mesh(
                 new THREE.CircleGeometry(4.5, 32),
                 new THREE.ShaderMaterial({
                     uniforms: {
                         uTime: { value: 0 },
-                        uColor: { value: new THREE.Color(color) }
+                        uColor: { value: new THREE.Color(portalEffectColor) } // Color only applies to the effect
                     },
                     vertexShader: portalVertexShader,
                     fragmentShader: portalFragmentShader,
@@ -396,7 +439,6 @@
             portalGroup.add(portalSurface);
             
             portalGroup.position.set(position.x, getNoise(position.x, position.z) + 6, position.z);
-            portalGroup.rotation.y = Math.random() * Math.PI; // Give them slightly different rotations
             portalGroup.name = name;
             portalGroup.castShadow = true;
             
@@ -468,9 +510,9 @@
         // =================================================================
         window.addEventListener('load', () => {
             const loadingScreen = document.getElementById('loading-screen');
-            setTimeout(() => { // Add a small delay for effect
+            setTimeout(() => {
                 loadingScreen.classList.add('hidden');
-            }, 500);
+            }, 1500); // Increased delay for loading screen fade
         });
 
         window.addEventListener('resize', () => {
@@ -489,10 +531,15 @@
                 hillMaterial.userData.shader.uniforms.uTime.value = elapsedTime;
             }
             
-            // Animate portal shaders
+            // Animate portal shaders and subtle rotation for rings
             workPortal.children[1].material.uniforms.uTime.value = elapsedTime;
             contactPortal.children[1].material.uniforms.uTime.value = elapsedTime;
             aboutPortal.children[1].material.uniforms.uTime.value = elapsedTime;
+
+            workPortal.rotation.y += 0.001;
+            contactPortal.rotation.y += 0.001;
+            aboutPortal.rotation.y += 0.001;
+
 
             controls.update();
             renderer.render(scene, camera);
