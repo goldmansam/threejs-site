@@ -361,57 +361,65 @@
             }
 
             // --- Doors and Labels ---
-            const workDoor = createClassicDoor(new THREE.Vector2(15, 20), 'workDoor');
-            createTextLabel('Work', workDoor.position, font);
+            const doorHeight = 15; // Increased door height
+            const doorWidth = 7.5; // Increased door width
+            
+            const workDoor = createClassicDoor(new THREE.Vector2(15, 20), 'workDoor', doorWidth, doorHeight);
+            createTextLabel('Work', workDoor.position, font, doorHeight);
 
-            const contactDoor = createClassicDoor(new THREE.Vector2(-35, -15), 'contactDoor');
-            createTextLabel('Contact', contactDoor.position, font);
+            const contactDoor = createClassicDoor(new THREE.Vector2(-35, -15), 'contactDoor', doorWidth, doorHeight);
+            createTextLabel('Contact', contactDoor.position, font, doorHeight);
 
-            const aboutDoor = createClassicDoor(new THREE.Vector2(30, -40), 'aboutDoor');
-            createTextLabel('About', aboutDoor.position, font);
+            const aboutDoor = createClassicDoor(new THREE.Vector2(30, -40), 'aboutDoor', doorWidth, doorHeight);
+            createTextLabel('About', aboutDoor.position, font, doorHeight);
         }
 
-        function createClassicDoor(xzPosition, name) {
+        function createClassicDoor(xzPosition, name, width, height) {
             const doorGroup = new THREE.Group();
             const doorMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
             const frameMaterial = new THREE.MeshStandardMaterial({ color: 0xf0f0f0 });
             const knobMaterial = new THREE.MeshStandardMaterial({ color: 0xD4AF37, metalness: 1.0, roughness: 0.2 });
 
-            const panel = new THREE.Mesh(new THREE.BoxGeometry(5, 10, 0.3), doorMaterial);
-            const topFrame = new THREE.Mesh(new THREE.BoxGeometry(6, 0.5, 0.5), frameMaterial);
-            topFrame.position.y = 5.25;
-            const leftFrame = new THREE.Mesh(new THREE.BoxGeometry(0.5, 11, 0.5), frameMaterial);
-            leftFrame.position.x = -2.75;
-            const rightFrame = new THREE.Mesh(new THREE.BoxGeometry(0.5, 11, 0.5), frameMaterial);
-            rightFrame.position.x = 2.75;
+            const panel = new THREE.Mesh(new THREE.BoxGeometry(width, height, 0.3), doorMaterial);
+            const topFrame = new THREE.Mesh(new THREE.BoxGeometry(width + 1, 0.5, 0.5), frameMaterial);
+            topFrame.position.y = height / 2 + 0.25;
+            const leftFrame = new THREE.Mesh(new THREE.BoxGeometry(0.5, height + 1, 0.5), frameMaterial);
+            leftFrame.position.x = -(width / 2 + 0.25);
+            const rightFrame = new THREE.Mesh(new THREE.BoxGeometry(0.5, height + 1, 0.5), frameMaterial);
+            rightFrame.position.x = (width / 2 + 0.25);
             const knob = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), knobMaterial);
-            knob.position.set(1.8, 0, 0.3);
+            knob.position.set(width / 2 - 0.7, 0, 0.3); // Adjust knob position based on new width
 
             doorGroup.add(panel, topFrame, leftFrame, rightFrame, knob);
             doorGroup.children.forEach(child => { child.castShadow = true; });
             doorGroup.name = name;
 
             const y = getNoise(xzPosition.x, xzPosition.y);
-            doorGroup.position.set(xzPosition.x, y + 5, xzPosition.y);
+            // Position door so its base is at the ground level
+            doorGroup.position.set(xzPosition.x, y + height / 2, xzPosition.y); 
             
             scene.add(doorGroup);
             interactiveObjects.push(doorGroup);
             return doorGroup;
         }
 
-        function createTextLabel(text, doorPosition, font) {
+        function createTextLabel(text, doorPosition, font, doorHeight) {
             const textGeometry = new TextGeometry(text, {
                 font: font,
-                size: 2,
-                height: 0.2,
+                size: 2.5, // Larger text size
+                height: 0.5, // More extruded
                 curveSegments: 12,
             });
-            textGeometry.center(); // Center the geometry
-            const textMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+            textGeometry.center();
+            const textMaterial = new THREE.MeshStandardMaterial({
+                color: 0x00FF00, // Neon Green
+                emissive: 0x00FF00, // Make it glow
+                emissiveIntensity: 1.5, // Adjust glow intensity
+                roughness: 0.4,
+            });
             const textMesh = new THREE.Mesh(textGeometry, textMaterial);
             textMesh.castShadow = true;
-            // Position above the door
-            textMesh.position.set(doorPosition.x, doorPosition.y + 7, doorPosition.z);
+            textMesh.position.set(doorPosition.x, doorPosition.y + doorHeight / 2 + 3, doorPosition.z); // Position above the larger door
             scene.add(textMesh);
         }
 
