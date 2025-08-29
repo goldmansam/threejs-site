@@ -21,32 +21,41 @@
             color: var(--text-color);
             overflow: hidden;
         }
-        
-        /* Loading Screen */
-        #loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
+
+        /* Pointer Lock Blocker for First-Person Controls */
+        #blocker {
+            position: absolute;
             width: 100%;
             height: 100%;
-            background-color: #1a1a1a;
-            color: white;
+            background-color: rgba(0,0,0,0.5);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
-            font-size: 3.5rem;
-            letter-spacing: 1px;
-            transition: opacity 1.5s ease-out, visibility 1.5s;
-            visibility: visible;
-            opacity: 1;
         }
 
-        #loading-screen.hidden {
-            opacity: 0;
-            visibility: hidden;
+        #instructions {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 2rem;
+            color: white;
+            cursor: pointer;
         }
 
+        #instructions p {
+            font-size: 2.5rem;
+            padding: 0;
+            margin: 0 0 20px 0;
+        }
+
+        #instructions span {
+            font-size: 1.5rem;
+        }
+        
         /* Canvas for the 3D scene */
         #storybook-canvas {
             position: fixed;
@@ -171,27 +180,15 @@
         .close-btn:hover {
             color: #333;
         }
-        
-        /* Hint Text */
-        .hint-text {
-            position: fixed;
-            bottom: 20px;
-            width: 100%;
-            text-align: center;
-            color: #555;
-            text-shadow: 0 1px 3px rgba(255,255,255,0.5);
-            z-index: 5;
-            pointer-events: none;
-            font-size: 1.8rem;
-            font-weight: 700;
-        }
-
     </style>
 </head>
 <body>
-    
-    <div id="loading-screen">
-        <p>Welcome to Sam's World</p>
+
+    <div id="blocker">
+        <div id="instructions">
+            <p>Click to Explore</p>
+            <span>W, A, S, D to Move • MOUSE to Look • CLICK a Door</span>
+        </div>
     </div>
 
     <canvas id="storybook-canvas"></canvas>
@@ -229,8 +226,6 @@
         </div>
     </div>
     
-    <p class="hint-text">Click a door • Drag to look • Scroll to zoom</p>
-
     <script type="importmap">
         {
             "imports": {
@@ -244,7 +239,7 @@
 
     <script type="module">
         import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
         import { FontLoader } from 'three/addons/loaders/FontLoader.js';
         import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
@@ -253,46 +248,61 @@
         const clock = new THREE.Clock();
         const interactiveObjects = [];
         const orbs = [];
-        let hillMaterial; // To access in animate loop
+        const textLabels = [];
+        let hillMaterial, hillsMesh;
+        let controls;
+        let camera, renderer;
+        let lastHoveredOrb = null;
+
+        // Player movement variables
+        const player = {
+            height: 4.0,
+            speed: 40.0,
+            turnSpeed: Math.PI * 0.02,
+            velocity: new THREE.Vector3(),
+            direction: new THREE.Vector3(),
+        };
+        const keyboard = {};
 
         // SCENE SETUP
         const hillColor = 0x004d00;
         const fogColor = 0xFFA07A;
         const topSkyColor = new THREE.Color(0x87CEEB);
         const bottomSkyColor = new THREE.Color(0xFFA500);
+        const neonGreen = new THREE.Color(0x39ff14); // Brighter neon green
 
-        // CAMERA & RENDERER
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 15, 50);
+        // --- Core Initialization ---
+        function init() {
+            // CAMERA & RENDERER
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, player.height, -5);
 
-        const renderer = new THREE.WebGLRenderer({
-            canvas: document.querySelector('#storybook-canvas'),
-            antialias: true,
-        });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer = new THREE.WebGLRenderer({
+                canvas: document.querySelector('#storybook-canvas'),
+                antialias: true,
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-        // CONTROLS
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.minDistance = 20;
-        controls.maxDistance = 80;
-        controls.maxPolarAngle = Math.PI / 2 - 0.05;
-        controls.target.set(0, 5, 0);
+            // FONT LOADER - TRIGGERS SCENE POPULATION
+            const fontLoader = new FontLoader();
+            fontLoader.load('https://unpkg.com/three@0.165.0/examples/fonts/helvetiker_regular.typeface.json', (font) => {
+                populateScene(font);
+                document.getElementById('blocker').style.display = 'flex'; // Show instructions
+            });
 
-        // --- Landscape Function ---
-        const getNoise = (x, z) => (Math.sin(x * 0.1) + Math.cos(z * 0.1)) * 4 + (Math.sin(x * 0.05) + Math.cos(z * 0.05)) * 8;
+            // POINTER LOCK CONTROLS
+            initPointerLock();
 
-        // FONT LOADER - TRIGGERS SCENE INITIALIZATION
-        const fontLoader = new FontLoader();
-        fontLoader.load('https://unpkg.com/three@0.165.0/examples/fonts/helvetiker_regular.typeface.json', (font) => {
-            initScene(font);
-            animate();
-        });
-
-        function initScene(font) {
+            // EVENT LISTENERS
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('keydown', (e) => (keyboard[e.key.toLowerCase()] = true));
+            window.addEventListener('keyup', (e) => (keyboard[e.key.toLowerCase()] = false));
+        }
+        
+        function populateScene(font) {
             // --- Sky & Fog ---
             const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
             const skyMaterial = new THREE.ShaderMaterial({
@@ -302,11 +312,11 @@
                 side: THREE.BackSide
             });
             scene.add(new THREE.Mesh(skyGeometry, skyMaterial));
-            scene.fog = new THREE.Fog(fogColor, 30, 100);
+            scene.fog = new THREE.Fog(fogColor, 80, 200); // Reduced fog
 
             // --- Lighting ---
             scene.add(new THREE.AmbientLight(0xFFFFFF, 0.7));
-            const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1.5);
+            const directionalLight = new THREE.DirectionLight(0xFFFFFF, 1.5);
             directionalLight.position.set(50, 50, 25);
             directionalLight.castShadow = true;
             directionalLight.shadow.mapSize.set(2048, 2048);
@@ -318,7 +328,7 @@
             scene.add(directionalLight);
             
             // --- Rolling Hills ---
-            const hillGeometry = new THREE.PlaneGeometry(300, 300, 100, 100);
+            const hillGeometry = new THREE.PlaneGeometry(300, 300, 150, 150);
             const positionAttribute = hillGeometry.getAttribute('position');
             for (let i = 0; i < positionAttribute.count; i++) {
                 positionAttribute.setZ(i, getNoise(positionAttribute.getX(i), positionAttribute.getY(i)));
@@ -337,23 +347,23 @@
                     hillMaterial.userData.shader = shader;
                 }
             });
-            const hills = new THREE.Mesh(hillGeometry, hillMaterial);
-            hills.rotation.x = -Math.PI / 2;
-            hills.receiveShadow = true;
-            scene.add(hills);
+            hillsMesh = new THREE.Mesh(hillGeometry, hillMaterial);
+            hillsMesh.rotation.x = -Math.PI / 2;
+            hillsMesh.receiveShadow = true;
+            scene.add(hillsMesh);
 
             // --- Orbs ---
             const orbFragmentShader = `uniform float uTime; uniform vec3 uColor; varying vec2 vUv; float random(vec2 st) { return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123); } float noise(vec2 st) { vec2 i = floor(st); vec2 f = fract(st); float a = random(i); float b = random(i + vec2(1.0, 0.0)); float c = random(i + vec2(0.0, 1.0)); float d = random(i + vec2(1.0, 1.0)); vec2 u = f * f * (3.0 - 2.0 * f); return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.y * u.x; } void main() { vec2 centeredUv = vUv * 2.0 - 1.0; float dist = length(centeredUv); float swirl = noise(centeredUv * 3.0 - uTime * 0.5); float alpha = smoothstep(1.0, 0.2, dist); gl_FragColor = vec4(uColor, (swirl * 0.7 + 0.3) * alpha); }`;
             const orbVertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
             const orbColors = [0xffc107, 0xe91e63, 0x2196f3, 0x4caf50, 0x9c27b0];
-            for (let i = 0; i < 15; i++) {
+            for (let i = 0; i < 50; i++) { // Increased orb count
                 const orb = new THREE.Mesh(
                     new THREE.SphereGeometry(1.5, 32, 32),
                     new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(orbColors[i % orbColors.length]) } }, vertexShader: orbVertexShader, fragmentShader: orbFragmentShader, transparent: true, blending: THREE.AdditiveBlending })
                 );
-                const x = (Math.random() - 0.5) * 150;
-                const z = (Math.random() - 0.5) * 150;
-                const y = getNoise(x, z) + 5 + Math.random() * 15;
+                const x = (Math.random() - 0.5) * 250;
+                const z = (Math.random() - 0.5) * 250;
+                const y = getNoise(x, z) + 5 + Math.random() * 20;
                 orb.position.set(x, y, z);
                 orb.userData.anim = { speed: Math.random() * 0.5 + 0.2, offset: Math.random() * Math.PI * 2 };
                 scene.add(orb);
@@ -361,134 +371,137 @@
             }
 
             // --- Doors and Labels ---
-            const doorHeight = 15; // Increased door height
-            const doorWidth = 7.5; // Increased door width
-            
-            const workDoor = createClassicDoor(new THREE.Vector2(15, 20), 'workDoor', doorWidth, doorHeight);
-            createTextLabel('Work', workDoor.position, font, doorHeight);
+            const workDoor = createClassicDoor(new THREE.Vector2(15, 20), 'workDoor');
+            createTextLabel('Work', workDoor.position, font, neonGreen);
 
-            const contactDoor = createClassicDoor(new THREE.Vector2(-35, -15), 'contactDoor', doorWidth, doorHeight);
-            createTextLabel('Contact', contactDoor.position, font, doorHeight);
+            const contactDoor = createClassicDoor(new THREE.Vector2(-35, -15), 'contactDoor');
+            createTextLabel('Contact', contactDoor.position, font, neonGreen);
 
-            const aboutDoor = createClassicDoor(new THREE.Vector2(30, -40), 'aboutDoor', doorWidth, doorHeight);
-            createTextLabel('About', aboutDoor.position, font, doorHeight);
+            const aboutDoor = createClassicDoor(new THREE.Vector2(30, -40), 'aboutDoor');
+            createTextLabel('About', aboutDoor.position, font, neonGreen);
         }
 
-        function createClassicDoor(xzPosition, name, width, height) {
+        // --- Object Creation Helpers ---
+        const getNoise = (x, z) => (Math.sin(x * 0.1) + Math.cos(z * 0.1)) * 4 + (Math.sin(x * 0.05) + Math.cos(z * 0.05)) * 8;
+
+        function createClassicDoor(xzPosition, name) {
             const doorGroup = new THREE.Group();
             const doorMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
             const frameMaterial = new THREE.MeshStandardMaterial({ color: 0xf0f0f0 });
             const knobMaterial = new THREE.MeshStandardMaterial({ color: 0xD4AF37, metalness: 1.0, roughness: 0.2 });
 
-            const panel = new THREE.Mesh(new THREE.BoxGeometry(width, height, 0.3), doorMaterial);
-            const topFrame = new THREE.Mesh(new THREE.BoxGeometry(width + 1, 0.5, 0.5), frameMaterial);
-            topFrame.position.y = height / 2 + 0.25;
-            const leftFrame = new THREE.Mesh(new THREE.BoxGeometry(0.5, height + 1, 0.5), frameMaterial);
-            leftFrame.position.x = -(width / 2 + 0.25);
-            const rightFrame = new THREE.Mesh(new THREE.BoxGeometry(0.5, height + 1, 0.5), frameMaterial);
-            rightFrame.position.x = (width / 2 + 0.25);
-            const knob = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), knobMaterial);
-            knob.position.set(width / 2 - 0.7, 0, 0.3); // Adjust knob position based on new width
+            const panel = new THREE.Mesh(new THREE.BoxGeometry(7, 14, 0.4), doorMaterial);
+            const topFrame = new THREE.Mesh(new THREE.BoxGeometry(8, 0.6, 0.6), frameMaterial);
+            topFrame.position.y = 7.3;
+            const leftFrame = new THREE.Mesh(new THREE.BoxGeometry(0.6, 15, 0.6), frameMaterial);
+            leftFrame.position.x = -3.7;
+            const rightFrame = new THREE.Mesh(new THREE.BoxGeometry(0.6, 15, 0.6), frameMaterial);
+            rightFrame.position.x = 3.7;
+            const knob = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16), knobMaterial);
+            knob.position.set(2.5, 0, 0.4);
 
             doorGroup.add(panel, topFrame, leftFrame, rightFrame, knob);
             doorGroup.children.forEach(child => { child.castShadow = true; });
             doorGroup.name = name;
 
             const y = getNoise(xzPosition.x, xzPosition.y);
-            // Position door so its base is at the ground level
-            doorGroup.position.set(xzPosition.x, y + height / 2, xzPosition.y); 
+            doorGroup.position.set(xzPosition.x, y + 7, xzPosition.y);
             
             scene.add(doorGroup);
             interactiveObjects.push(doorGroup);
             return doorGroup;
         }
 
-        function createTextLabel(text, doorPosition, font, doorHeight) {
-            const textGeometry = new TextGeometry(text, {
-                font: font,
-                size: 2.5, // Larger text size
-                height: 0.5, // More extruded
-                curveSegments: 12,
-            });
+        function createTextLabel(text, doorPosition, font, color) {
+            const textGeometry = new TextGeometry(text, { font: font, size: 2.5, height: 0.3, curveSegments: 12 });
             textGeometry.center();
-            const textMaterial = new THREE.MeshStandardMaterial({
-                color: 0x00FF00, // Neon Green
-                emissive: 0x00FF00, // Make it glow
-                emissiveIntensity: 1.5, // Adjust glow intensity
-                roughness: 0.4,
-            });
+            const textMaterial = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 2.5 });
             const textMesh = new THREE.Mesh(textGeometry, textMaterial);
             textMesh.castShadow = true;
-            textMesh.position.set(doorPosition.x, doorPosition.y + doorHeight / 2 + 3, doorPosition.z); // Position above the larger door
+            textMesh.position.set(doorPosition.x, doorPosition.y + 9, doorPosition.z);
             scene.add(textMesh);
+            textLabels.push(textMesh);
         }
 
-        // INTERACTIVITY
-        // =================================================================
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
+        // --- Controls and Interaction ---
+        function initPointerLock() {
+            controls = new PointerLockControls(camera, document.body);
+            const blocker = document.getElementById('blocker');
+            const instructions = document.getElementById('instructions');
 
-        const onCanvasClick = (event) => {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(interactiveObjects, true);
-        
-            if (intersects.length > 0) {
-                let clickedObject = intersects[0].object;
-                while (clickedObject.parent && !interactiveObjects.includes(clickedObject)) {
-                    clickedObject = clickedObject.parent;
+            instructions.addEventListener('click', () => controls.lock());
+            controls.addEventListener('lock', () => { blocker.style.display = 'none'; });
+            controls.addEventListener('unlock', () => { blocker.style.display = 'flex'; });
+
+            scene.add(controls.getObject());
+        }
+
+        function updatePlayer(delta) {
+            if (!controls.isLocked) return;
+
+            const speedDelta = player.speed * delta;
+            player.velocity.x -= player.velocity.x * 10.0 * delta;
+            player.velocity.z -= player.velocity.z * 10.0 * delta;
+
+            if (keyboard['w']) player.direction.z = 1;
+            if (keyboard['s']) player.direction.z = -1;
+            if (keyboard['a']) player.direction.x = -1;
+            if (keyboard['d']) player.direction.x = 1;
+
+            if (keyboard['w'] || keyboard['s']) controls.moveForward(player.direction.z > 0 ? speedDelta : -speedDelta);
+            if (keyboard['a'] || keyboard['d']) controls.moveRight(player.direction.x > 0 ? -speedDelta : speedDelta);
+            
+            player.direction.z = 0;
+            player.direction.x = 0;
+
+            // Grounding logic
+            const downRaycaster = new THREE.Raycaster(camera.position, new THREE.Vector3(0, -1, 0));
+            const groundIntersects = downRaycaster.intersectObject(hillsMesh);
+            if (groundIntersects.length > 0) {
+                const groundHeight = groundIntersects[0].point.y;
+                if (camera.position.y < groundHeight + player.height) {
+                    camera.position.y = groundHeight + player.height;
+                    player.velocity.y = 0;
                 }
-                
-                // Simplified bounce animation on the world Y-axis
-                gsap.to(clickedObject.position, {
-                    y: clickedObject.position.y + 1.5,
-                    duration: 0.3,
-                    ease: 'power2.out',
-                    yoyo: true,
-                    repeat: 1
-                });
-                
-                const panelId = doorPanelMap[clickedObject.name];
-                if (panelId) showPanel(panelId);
             }
-        };
-        window.addEventListener('click', onCanvasClick);
+        }
+        
+        function checkOrbInteraction() {
+            const gazeRaycaster = new THREE.Raycaster();
+            gazeRaycaster.setFromCamera({ x: 0, y: 0 }, camera);
+            const intersects = gazeRaycaster.intersectObjects(orbs);
 
-        // UI PANEL LOGIC
-        // =================================================================
-        const doorPanelMap = { 'workDoor': 'panel-work', 'contactDoor': 'panel-contact', 'aboutDoor': 'panel-about' };
-        const panels = document.querySelectorAll('.panel-overlay');
-        const navButtons = document.querySelectorAll('header button');
-        const closeButtons = document.querySelectorAll('.close-btn');
+            if (intersects.length > 0) {
+                const hoveredOrb = intersects[0].object;
+                if (lastHoveredOrb !== hoveredOrb) {
+                    if (lastHoveredOrb) {
+                        gsap.to(lastHoveredOrb.scale, { x: 1, y: 1, z: 1, duration: 0.3 });
+                        gsap.to(lastHoveredOrb.material.uniforms.uColor.value, { r: orbColors[orbs.indexOf(lastHoveredOrb) % orbColors.length].r, g: orbColors[orbs.indexOf(lastHoveredOrb) % orbColors.length].g, b: orbColors[orbs.indexOf(lastHoveredOrb) % orbColors.length].b, duration: 0.3 });
+                    }
+                    lastHoveredOrb = hoveredOrb;
+                    gsap.to(hoveredOrb.scale, { x: 1.5, y: 1.5, z: 1.5, duration: 0.3 });
+                    gsap.to(hoveredOrb.material.uniforms.uColor.value, { r: 1, g: 1, b: 1, duration: 0.3 });
+                }
+            } else {
+                if (lastHoveredOrb) {
+                    gsap.to(lastHoveredOrb.scale, { x: 1, y: 1, z: 1, duration: 0.3 });
+                     gsap.to(lastHoveredOrb.material.uniforms.uColor.value, { r: orbColors[orbs.indexOf(lastHoveredOrb) % orbColors.length].r, g: orbColors[orbs.indexOf(lastHoveredOrb) % orbColors.length].g, b: orbColors[orbs.indexOf(lastHoveredOrb) % orbColors.length].b, duration: 0.3 });
+                    lastHoveredOrb = null;
+                }
+            }
+        }
 
-        const hideAllPanels = () => panels.forEach(panel => panel.classList.remove('active'));
-        const showPanel = (panelId) => {
-            hideAllPanels();
-            document.getElementById(panelId)?.classList.add('active');
-        };
-
-        navButtons.forEach(button => button.addEventListener('click', () => showPanel(button.dataset.panel)));
-        closeButtons.forEach(button => button.addEventListener('click', hideAllPanels));
-        panels.forEach(panel => panel.addEventListener('click', (e) => { if (e.target === panel) hideAllPanels(); }));
-
-        // STARTUP & RESIZE
-        // =================================================================
-        window.addEventListener('load', () => {
-            document.getElementById('loading-screen').classList.add('hidden');
-        });
-
-        window.addEventListener('resize', () => {
+        // --- Event Handlers ---
+        function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        });
+        }
 
-        // ANIMATION LOOP
-        // =================================================================
+        // --- Animation Loop ---
         function animate() {
             requestAnimationFrame(animate);
+            const delta = clock.getDelta();
             const elapsedTime = clock.getElapsedTime();
             
             if (hillMaterial?.userData.shader) {
@@ -500,10 +513,16 @@
                 const { speed, offset } = orb.userData.anim;
                 orb.position.y += Math.sin(elapsedTime * speed + offset) * 0.01;
             });
+            
+            textLabels.forEach(label => label.lookAt(camera.position));
+            
+            updatePlayer(delta);
+            checkOrbInteraction();
 
-            controls.update();
             renderer.render(scene, camera);
         };
+
+        init();
     </script>
 </body>
 </html>
