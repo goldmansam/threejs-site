@@ -31,6 +31,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            z-index: 1001; /* Above header */
         }
 
         #instructions {
@@ -108,7 +109,7 @@
             display: flex;
             justify-content: center;
             align-items: flex-end;
-            z-index: 20;
+            z-index: 1002; /* Above blocker */
             pointer-events: none;
             opacity: 0;
             transform: translateY(30px);
@@ -258,7 +259,6 @@
         const player = {
             height: 4.0,
             speed: 40.0,
-            turnSpeed: Math.PI * 0.02,
             velocity: new THREE.Vector3(),
             direction: new THREE.Vector3(),
         };
@@ -269,11 +269,10 @@
         const fogColor = 0xFFA07A;
         const topSkyColor = new THREE.Color(0x87CEEB);
         const bottomSkyColor = new THREE.Color(0xFFA500);
-        const neonGreen = new THREE.Color(0x39ff14); // Brighter neon green
+        const neonGreen = new THREE.Color(0x39ff14);
 
         // --- Core Initialization ---
         function init() {
-            // CAMERA & RENDERER
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(0, player.height, -5);
 
@@ -286,24 +285,21 @@
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-            // FONT LOADER - TRIGGERS SCENE POPULATION
             const fontLoader = new FontLoader();
             fontLoader.load('https://unpkg.com/three@0.165.0/examples/fonts/helvetiker_regular.typeface.json', (font) => {
                 populateScene(font);
-                document.getElementById('blocker').style.display = 'flex'; // Show instructions
+                document.getElementById('blocker').style.display = 'flex';
+                animate(); // Start animation loop after scene is ready
             });
 
-            // POINTER LOCK CONTROLS
             initPointerLock();
 
-            // EVENT LISTENERS
             window.addEventListener('resize', onWindowResize);
             window.addEventListener('keydown', (e) => (keyboard[e.key.toLowerCase()] = true));
             window.addEventListener('keyup', (e) => (keyboard[e.key.toLowerCase()] = false));
         }
         
         function populateScene(font) {
-            // --- Sky & Fog ---
             const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
             const skyMaterial = new THREE.ShaderMaterial({
                 uniforms: { uTopColor: { value: topSkyColor }, uBottomColor: { value: bottomSkyColor }, uOffset: { value: 33 }, uExponent: { value: 0.6 } },
@@ -312,11 +308,12 @@
                 side: THREE.BackSide
             });
             scene.add(new THREE.Mesh(skyGeometry, skyMaterial));
-            scene.fog = new THREE.Fog(fogColor, 80, 200); // Reduced fog
+            scene.fog = new THREE.Fog(fogColor, 80, 200);
 
-            // --- Lighting ---
             scene.add(new THREE.AmbientLight(0xFFFFFF, 0.7));
-            const directionalLight = new THREE.DirectionLight(0xFFFFFF, 1.5);
+            
+            // ** FIXED ERROR HERE: Used correct `DirectionalLight` constructor **
+            const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1.5);
             directionalLight.position.set(50, 50, 25);
             directionalLight.castShadow = true;
             directionalLight.shadow.mapSize.set(2048, 2048);
@@ -327,7 +324,6 @@
             directionalLight.shadow.camera.bottom = -100;
             scene.add(directionalLight);
             
-            // --- Rolling Hills ---
             const hillGeometry = new THREE.PlaneGeometry(300, 300, 150, 150);
             const positionAttribute = hillGeometry.getAttribute('position');
             for (let i = 0; i < positionAttribute.count; i++) {
@@ -352,25 +348,25 @@
             hillsMesh.receiveShadow = true;
             scene.add(hillsMesh);
 
-            // --- Orbs ---
             const orbFragmentShader = `uniform float uTime; uniform vec3 uColor; varying vec2 vUv; float random(vec2 st) { return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123); } float noise(vec2 st) { vec2 i = floor(st); vec2 f = fract(st); float a = random(i); float b = random(i + vec2(1.0, 0.0)); float c = random(i + vec2(0.0, 1.0)); float d = random(i + vec2(1.0, 1.0)); vec2 u = f * f * (3.0 - 2.0 * f); return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.y * u.x; } void main() { vec2 centeredUv = vUv * 2.0 - 1.0; float dist = length(centeredUv); float swirl = noise(centeredUv * 3.0 - uTime * 0.5); float alpha = smoothstep(1.0, 0.2, dist); gl_FragColor = vec4(uColor, (swirl * 0.7 + 0.3) * alpha); }`;
             const orbVertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
             const orbColors = [0xffc107, 0xe91e63, 0x2196f3, 0x4caf50, 0x9c27b0];
-            for (let i = 0; i < 50; i++) { // Increased orb count
+            for (let i = 0; i < 50; i++) {
+                const originalColor = new THREE.Color(orbColors[i % orbColors.length]);
                 const orb = new THREE.Mesh(
                     new THREE.SphereGeometry(1.5, 32, 32),
-                    new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(orbColors[i % orbColors.length]) } }, vertexShader: orbVertexShader, fragmentShader: orbFragmentShader, transparent: true, blending: THREE.AdditiveBlending })
+                    new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uColor: { value: originalColor.clone() } }, vertexShader: orbVertexShader, fragmentShader: orbFragmentShader, transparent: true, blending: THREE.AdditiveBlending })
                 );
                 const x = (Math.random() - 0.5) * 250;
                 const z = (Math.random() - 0.5) * 250;
                 const y = getNoise(x, z) + 5 + Math.random() * 20;
                 orb.position.set(x, y, z);
+                orb.userData.originalColor = originalColor; // Store original color
                 orb.userData.anim = { speed: Math.random() * 0.5 + 0.2, offset: Math.random() * Math.PI * 2 };
                 scene.add(orb);
                 orbs.push(orb);
             }
 
-            // --- Doors and Labels ---
             const workDoor = createClassicDoor(new THREE.Vector2(15, 20), 'workDoor');
             createTextLabel('Work', workDoor.position, font, neonGreen);
 
@@ -381,7 +377,6 @@
             createTextLabel('About', aboutDoor.position, font, neonGreen);
         }
 
-        // --- Object Creation Helpers ---
         const getNoise = (x, z) => (Math.sin(x * 0.1) + Math.cos(z * 0.1)) * 4 + (Math.sin(x * 0.05) + Math.cos(z * 0.05)) * 8;
 
         function createClassicDoor(xzPosition, name) {
@@ -389,7 +384,6 @@
             const doorMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
             const frameMaterial = new THREE.MeshStandardMaterial({ color: 0xf0f0f0 });
             const knobMaterial = new THREE.MeshStandardMaterial({ color: 0xD4AF37, metalness: 1.0, roughness: 0.2 });
-
             const panel = new THREE.Mesh(new THREE.BoxGeometry(7, 14, 0.4), doorMaterial);
             const topFrame = new THREE.Mesh(new THREE.BoxGeometry(8, 0.6, 0.6), frameMaterial);
             topFrame.position.y = 7.3;
@@ -399,14 +393,11 @@
             rightFrame.position.x = 3.7;
             const knob = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16), knobMaterial);
             knob.position.set(2.5, 0, 0.4);
-
             doorGroup.add(panel, topFrame, leftFrame, rightFrame, knob);
             doorGroup.children.forEach(child => { child.castShadow = true; });
             doorGroup.name = name;
-
             const y = getNoise(xzPosition.x, xzPosition.y);
             doorGroup.position.set(xzPosition.x, y + 7, xzPosition.y);
-            
             scene.add(doorGroup);
             interactiveObjects.push(doorGroup);
             return doorGroup;
@@ -423,7 +414,6 @@
             textLabels.push(textMesh);
         }
 
-        // --- Controls and Interaction ---
         function initPointerLock() {
             controls = new PointerLockControls(camera, document.body);
             const blocker = document.getElementById('blocker');
@@ -432,6 +422,20 @@
             instructions.addEventListener('click', () => controls.lock());
             controls.addEventListener('lock', () => { blocker.style.display = 'none'; });
             controls.addEventListener('unlock', () => { blocker.style.display = 'flex'; });
+            document.addEventListener('click', () => {
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera({x: 0, y: 0}, camera);
+                const intersects = raycaster.intersectObjects(interactiveObjects, true);
+                if (intersects.length > 0 && intersects[0].distance < 20) {
+                     let clickedObject = intersects[0].object;
+                     while (clickedObject.parent && !interactiveObjects.includes(clickedObject)) {
+                         clickedObject = clickedObject.parent;
+                     }
+                     const panelId = doorPanelMap[clickedObject.name];
+                     if (panelId) showPanel(panelId);
+                     controls.unlock();
+                }
+            });
 
             scene.add(controls.getObject());
         }
@@ -443,18 +447,13 @@
             player.velocity.x -= player.velocity.x * 10.0 * delta;
             player.velocity.z -= player.velocity.z * 10.0 * delta;
 
-            if (keyboard['w']) player.direction.z = 1;
-            if (keyboard['s']) player.direction.z = -1;
-            if (keyboard['a']) player.direction.x = -1;
-            if (keyboard['d']) player.direction.x = 1;
+            player.direction.z = Number(keyboard['w']) - Number(keyboard['s']);
+            player.direction.x = Number(keyboard['d']) - Number(keyboard['a']);
+            player.direction.normalize();
 
-            if (keyboard['w'] || keyboard['s']) controls.moveForward(player.direction.z > 0 ? speedDelta : -speedDelta);
-            if (keyboard['a'] || keyboard['d']) controls.moveRight(player.direction.x > 0 ? -speedDelta : speedDelta);
+            if (keyboard['w'] || keyboard['s']) controls.moveForward(player.direction.z * speedDelta);
+            if (keyboard['a'] || keyboard['d']) controls.moveRight(player.direction.x * speedDelta);
             
-            player.direction.z = 0;
-            player.direction.x = 0;
-
-            // Grounding logic
             const downRaycaster = new THREE.Raycaster(camera.position, new THREE.Vector3(0, -1, 0));
             const groundIntersects = downRaycaster.intersectObject(hillsMesh);
             if (groundIntersects.length > 0) {
@@ -471,13 +470,15 @@
             gazeRaycaster.setFromCamera({ x: 0, y: 0 }, camera);
             const intersects = gazeRaycaster.intersectObjects(orbs);
 
-            if (intersects.length > 0) {
+            if (intersects.length > 0 && intersects[0].distance < 30) {
                 const hoveredOrb = intersects[0].object;
                 if (lastHoveredOrb !== hoveredOrb) {
+                    // Reset previous orb if there was one
                     if (lastHoveredOrb) {
                         gsap.to(lastHoveredOrb.scale, { x: 1, y: 1, z: 1, duration: 0.3 });
-                        gsap.to(lastHoveredOrb.material.uniforms.uColor.value, { r: orbColors[orbs.indexOf(lastHoveredOrb) % orbColors.length].r, g: orbColors[orbs.indexOf(lastHoveredOrb) % orbColors.length].g, b: orbColors[orbs.indexOf(lastHoveredOrb) % orbColors.length].b, duration: 0.3 });
+                        gsap.to(lastHoveredOrb.material.uniforms.uColor.value, { ...lastHoveredOrb.userData.originalColor, duration: 0.3 });
                     }
+                    // Animate new orb
                     lastHoveredOrb = hoveredOrb;
                     gsap.to(hoveredOrb.scale, { x: 1.5, y: 1.5, z: 1.5, duration: 0.3 });
                     gsap.to(hoveredOrb.material.uniforms.uColor.value, { r: 1, g: 1, b: 1, duration: 0.3 });
@@ -485,20 +486,33 @@
             } else {
                 if (lastHoveredOrb) {
                     gsap.to(lastHoveredOrb.scale, { x: 1, y: 1, z: 1, duration: 0.3 });
-                     gsap.to(lastHoveredOrb.material.uniforms.uColor.value, { r: orbColors[orbs.indexOf(lastHoveredOrb) % orbColors.length].r, g: orbColors[orbs.indexOf(lastHoveredOrb) % orbColors.length].g, b: orbColors[orbs.indexOf(lastHoveredOrb) % orbColors.length].b, duration: 0.3 });
+                    gsap.to(lastHoveredOrb.material.uniforms.uColor.value, { ...lastHoveredOrb.userData.originalColor, duration: 0.3 });
                     lastHoveredOrb = null;
                 }
             }
         }
 
-        // --- Event Handlers ---
+        const doorPanelMap = { 'workDoor': 'panel-work', 'contactDoor': 'panel-contact', 'aboutDoor': 'panel-about' };
+        const panels = document.querySelectorAll('.panel-overlay');
+        const navButtons = document.querySelectorAll('header button');
+        const closeButtons = document.querySelectorAll('.close-btn');
+
+        const hideAllPanels = () => panels.forEach(panel => panel.classList.remove('active'));
+        const showPanel = (panelId) => {
+            hideAllPanels();
+            document.getElementById(panelId)?.classList.add('active');
+        };
+
+        navButtons.forEach(button => button.addEventListener('click', () => { showPanel(button.dataset.panel); controls.unlock(); }));
+        closeButtons.forEach(button => button.addEventListener('click', hideAllPanels));
+        panels.forEach(panel => panel.addEventListener('click', (e) => { if (e.target === panel) hideAllPanels(); }));
+
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // --- Animation Loop ---
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
@@ -517,7 +531,7 @@
             textLabels.forEach(label => label.lookAt(camera.position));
             
             updatePlayer(delta);
-            checkOrbInteraction();
+            if (controls.isLocked) checkOrbInteraction();
 
             renderer.render(scene, camera);
         };
