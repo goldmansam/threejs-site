@@ -10,9 +10,6 @@
     <style>
         /* CSS for the entire page */
         :root {
-            --accent-1: #ffc107; /* Yellow */
-            --accent-2: #e91e63; /* Pink/Red */
-            --accent-3: #2196f3; /* Blue */
             --text-color: #333;
         }
 
@@ -89,7 +86,7 @@
             padding: 10px 25px;
             border: 2px solid white;
             border-radius: 50px;
-            font-size: 1rem; /* Adjusted for new font */
+            font-size: 1rem;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -149,7 +146,7 @@
         
         .panel-content h2 {
             margin-top: 0;
-            font-size: 3.5rem; /* Adjusted for new font */
+            font-size: 3.5rem;
             margin-bottom: 10px;
             font-family: 'Playfair Display', serif;
             font-weight: 700;
@@ -295,7 +292,6 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
             const fontLoader = new FontLoader();
-            // ** CHANGED FONT TO OPTIMER BOLD for a more classic look **
             fontLoader.load('https://unpkg.com/three@0.165.0/examples/fonts/optimer_bold.typeface.json', (font) => {
                 populateScene(font);
                 document.getElementById('blocker').style.display = 'flex';
@@ -303,7 +299,7 @@
             });
 
             initPointerLock();
-
+            
             window.addEventListener('resize', onWindowResize);
             window.addEventListener('keydown', (e) => (keyboard[e.key.toLowerCase()] = true));
             window.addEventListener('keyup', (e) => (keyboard[e.key.toLowerCase()] = false));
@@ -414,15 +410,15 @@
         function createTextLabel(text, doorPosition, font, color) {
             const textGeometry = new TextGeometry(text, {
                 font: font,
-                size: 2.2, // Adjusted size for the new font
-                height: 0.3,
+                size: 2.2,
+                depth: 0.3, // ** FIXED: Changed 'height' to 'depth' **
                 curveSegments: 12,
             });
             textGeometry.center();
             const textMaterial = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 2.5 });
             const textMesh = new THREE.Mesh(textGeometry, textMaterial);
             textMesh.castShadow = true;
-            textMesh.position.set(doorPosition.x, doorPosition.y + 9.5, doorPosition.z); // Adjusted height
+            textMesh.position.set(doorPosition.x, doorPosition.y + 9.5, doorPosition.z);
             scene.add(textMesh);
             textLabels.push(textMesh);
         }
@@ -436,7 +432,7 @@
             controls.addEventListener('lock', () => { blocker.style.display = 'none'; });
             controls.addEventListener('unlock', () => { blocker.style.display = 'flex'; });
             document.addEventListener('click', () => {
-                if (!controls.isLocked) return; // Only check for door clicks if controls are locked
+                if (!controls.isLocked) return;
                 const raycaster = new THREE.Raycaster();
                 raycaster.setFromCamera({x: 0, y: 0}, camera);
                 const intersects = raycaster.intersectObjects(interactiveObjects, true);
